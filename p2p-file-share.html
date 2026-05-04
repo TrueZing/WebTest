@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P File Share</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; }
+    .app { max-width: 660px; width: 100%; }
+    h1 { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+    .subtitle { font-size: 14px; color: #666; margin-bottom: 1.5rem; }
+    .card { background: #fff; border: 0.5px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+    .card-title { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem; }
+    .step-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 1rem; }
+    .step-num { width: 24px; height: 24px; border-radius: 50%; background: #f0f0ee; border: 0.5px solid rgba(0,0,0,0.12); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: #888; flex-shrink: 0; margin-top: 5px; }
+    .step-num.active { background: #deeaf8; border-color: #7ab0e0; color: #0c447c; }
+    .step-num.done { background: #e6f2d9; border-color: #8ec44a; color: #27500a; }
+    .step-content { flex: 1; }
+    .step-label { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+    textarea { width: 100%; height: 90px; font-size: 12px; font-family: 'Courier New', monospace; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 8px; padding: 8px 10px; resize: vertical; background: #fafaf8; outline: none; }
+    textarea:focus { border-color: rgba(0,0,0,0.35); }
+    input[type="text"] { width: 100%; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 8px; padding: 8px 10px; font-size: 14px; background: #fafaf8; outline: none; }
+    .btn-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .btn { border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.12s; }
+    .btn-ghost { background: #fff; border: 0.5px solid rgba(0,0,0,0.2); color: #1a1a1a; }
+    .btn-ghost:hover { background: #f5f5f3; }
+    .btn-accent { background: #185fa5; border: none; color: #e6f1fb; }
+    .btn-accent:hover { background: #0c447c; }
+    .btn-accent:disabled { opacity: 0.4; cursor: not-allowed; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px; border-radius: 99px; }
+    .status-idle { background: #f0f0ee; color: #666; }
+    .status-connecting { background: #faeeda; color: #633806; }
+    .status-connected { background: #e6f2d9; color: #27500a; }
+    .status-error { background: #fce8e8; color: #791f1f; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; }
+    .tab-row { display: flex; gap: 4px; margin-bottom: 1rem; }
+    .tab { padding: 7px 14px; font-size: 13px; border: 0.5px solid rgba(0,0,0,0.12); border-radius: 8px; cursor: pointer; color: #888; background: transparent; }
+    .tab.active { background: #f0f0ee; color: #1a1a1a; border-color: rgba(0,0,0,0.2); font-weight: 500; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .drop-zone { border: 1.5px dashed rgba(0,0,0,0.18); border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; transition: background 0.12s; }
+    .drop-zone:hover, .drop-zone.drag-over { background: #f0f0ee; }
+    .drop-icon { font-size: 28px; margin-bottom: 8px; }
+    .drop-label { font-size: 14px; color: #888; }
+    .file-queue { margin-top: 1rem; display: flex; flex-direction: column; gap: 6px; }
+    .file-item { display: flex; align-items: center; gap: 10px; background: #f5f5f3; border-radius: 8px; padding: 8px 12px; }
+    .file-icon { width: 28px; height: 28px; background: #deeaf8; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #0c447c; font-weight: 600; flex-shrink: 0; }
+    .file-name { font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-size { font-size: 12px; color: #888; flex-shrink: 0; }
+    .file-status { font-size: 11px; color: #888; flex-shrink: 0; min-width: 36px; text-align: right; }
+    .progress-bar { height: 3px; background: rgba(0,0,0,0.08); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #185fa5; border-radius: 2px; transition: width 0.1s; }
+    .received-item { display: flex; align-items: center; gap: 10px; background: #e6f2d9; border-radius: 8px; padding: 8px 12px; border: 0.5px solid #8ec44a; }
+    .dl-btn { font-size: 12px; padding: 5px 12px; background: #27500a; color: #e6f2d9; border: none; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-block; white-space: nowrap; }
+    .copy-hint { font-size: 11px; color: #888; margin-top: 5px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>P2P File Share</h1>
+  <p class="subtitle">Direct browser-to-browser transfer — no uploads, no servers, no limits.</p>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div class="card-title" style="margin-bottom:0;">Connection</div>
+      <span class="status-badge status-idle" id="status-badge"><span class="dot"></span> <span id="status-text">Idle</span></span>
+    </div>
+    <div class="tab-row">
+      <button class="tab active" onclick="switchMode('send')">Send files</button>
+      <button class="tab" onclick="switchMode('receive')">Receive files</button>
+    </div>
+
+    <!-- SEND PANEL -->
+    <div class="panel active" id="panel-send">
+      <div class="step-row">
+        <div class="step-num active" id="snum1">1</div>
+        <div class="step-content">
+          <div class="step-label">Create an offer</div>
+          <p style="font-size:13px;color:#666;margin-bottom:8px;">Generate a connection offer and share it with the receiver.</p>
+          <div class="btn-row">
+            <button class="btn btn-accent" id="btn-create-offer" onclick="createOffer()">Create offer</button>
+          </div>
+          <div id="offer-out" style="display:none;margin-top:10px;">
+            <textarea id="offer-sdp" readonly placeholder="Offer SDP will appear here…"></textarea>
+            <p class="copy-hint">Copy this and send it to the receiver (paste, email, message, etc.)</p>
+            <div class="btn-row">
+              <button class="btn btn-ghost" onclick="copyText('offer-sdp')">Copy offer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num" id="snum2">2</div>
+        <div class="step-content">
+          <div class="step-label">Paste receiver's answer</div>
+          <textarea id="answer-sdp" placeholder="Paste the answer from the receiver here…"></textarea>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="setAnswer()">Connect</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECEIVE PANEL -->
+    <div class="panel" id="panel-receive">
+      <div class="step-row">
+        <div class="step-num active">1</div>
+        <div class="step-content">
+          <div class="step-label">Paste sender's offer</div>
+          <textarea id="recv-offer-sdp" placeholder="Paste the offer from the sender here…"></textarea>
+          <div class="btn-row">
+            <button class="btn btn-accent" onclick="createAnswer()">Generate answer</button>
+          </div>
+          <div id="answer-out" style="display:none;margin-top:10px;">
+            <textarea id="my-answer-sdp" readonly placeholder="Your answer will appear here…"></textarea>
+            <p class="copy-hint">Send this answer back to the sender to complete the connection.</p>
+            <div class="btn-row">
+              <button class="btn btn-ghost" onclick="copyText('my-answer-sdp')">Copy answer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEND FILES -->
+  <div class="card" id="send-section">
+    <div class="card-title">Files to send</div>
+    <div class="drop-zone" id="drop-zone"
+         onclick="document.getElementById('file-input').click()"
+         ondragover="onDragOver(event)"
+         ondragleave="onDragLeave(event)"
+         ondrop="onDrop(event)">
+      <div class="drop-icon">📂</div>
+      <div class="drop-label">Drop files here or click to browse</div>
+    </div>
+    <input type="file" id="file-input" multiple style="display:none" onchange="onFileSelect(event)">
+    <div class="file-queue" id="file-queue"></div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn btn-accent" id="btn-send" disabled onclick="sendFiles()">Send files</button>
+    </div>
+  </div>
+
+  <!-- RECEIVED FILES -->
+  <div class="card" id="recv-section" style="display:none;">
+    <div class="card-title">Received files</div>
+    <div class="file-queue" id="received-queue">
+      <p style="font-size:13px;color:#888;">Waiting for files from sender…</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  let pc = null, dc = null, mode = 'send';
+  let filesToSend = [], receivingFile = null, receivedChunks = [], receivedSize = 0;
+  const CHUNK = 16384;
+
+  function switchMode(m) {
+    mode = m;
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i === 0 && m === 'send') || (i === 1 && m === 'receive')));
+    document.getElementById('panel-send').classList.toggle('active', m === 'send');
+    document.getElementById('panel-receive').classList.toggle('active', m === 'receive');
+    document.getElementById('send-section').style.display = m === 'send' ? '' : 'none';
+    document.getElementById('recv-section').style.display = m === 'receive' ? '' : 'none';
+  }
+
+  function setStatus(s, label) {
+    const b = document.getElementById('status-badge');
+    b.className = 'status-badge status-' + s;
+    document.getElementById('status-text').textContent = label;
+  }
+
+  function makePC() {
+    if (pc) pc.close();
+    pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    pc.oniceconnectionstatechange = () => {
+      const s = pc.iceConnectionState;
+      if (s === 'connected' || s === 'completed') setStatus('connected', 'Connected');
+      else if (s === 'checking' || s === 'new') setStatus('connecting', 'Connecting…');
+      else if (s === 'disconnected' || s === 'failed' || s === 'closed') setStatus('error', 'Disconnected');
+    };
+    return pc;
+  }
+
+  async function createOffer() {
+    makePC();
+    dc = pc.createDataChannel('files');
+    setupSendDC(dc);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await waitForICE(pc);
+    document.getElementById('offer-sdp').value = JSON.stringify(pc.localDescription);
+    document.getElementById('offer-out').style.display = '';
+    document.getElementById('snum1').classList.add('done');
+    document.getElementById('snum2').classList.add('active');
+    setStatus('connecting', 'Waiting for answer…');
+  }
+
+  async function setAnswer() {
+    const raw = document.getElementById('answer-sdp').value.trim();
+    if (!raw) return;
+    try {
+      await pc.setRemoteDescription(JSON.parse(raw));
+      setStatus('connecting', 'Connecting…');
+      document.getElementById('snum2').classList.add('done');
+    } catch (e) {
+      alert('Invalid answer. Make sure you pasted it correctly.');
+    }
+  }
+
+  async function createAnswer() {
+    makePC();
+    pc.ondatachannel = e => { dc = e.channel; setupRecvDC(dc); };
+    const raw = document.getElementById('recv-offer-sdp').value.trim();
+    if (!raw) return;
+    try {
+      await pc.setRemoteDescription(JSON.parse(raw));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await waitForICE(pc);
+      document.getElementById('my-answer-sdp').value = JSON.stringify(pc.localDescription);
+      document.getElementById('answer-out').style.display = '';
+      setStatus('connecting', 'Waiting for sender…');
+    } catch (e) {
+      alert('Invalid offer. Check the pasted text.');
+    }
+  }
+
+  function waitForICE(pc) {
+    return new Promise(res => {
+      if (pc.iceGatheringState === 'complete') { res(); return; }
+      pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') res(); };
+      setTimeout(res, 4000);
+    });
+  }
+
+  function setupSendDC(ch) {
+    ch.onopen = () => { setStatus('connected', 'Connected'); document.getElementById('btn-send').disabled = filesToSend.length === 0; };
+    ch.onclose = () => setStatus('idle', 'Idle');
+  }
+
+  function setupRecvDC(ch) {
+    ch.binaryType = 'arraybuffer';
+    ch.onopen = () => setStatus('connected', 'Connected');
+    ch.onmessage = e => handleRecv(e.data);
+  }
+
+  function handleRecv(data) {
+    if (typeof data === 'string') {
+      const msg = JSON.parse(data);
+      if (msg.type === 'file-start') {
+        receivingFile = msg;
+        receivedChunks = [];
+        receivedSize = 0;
+        addReceivedPlaceholder(msg);
+      } else if (msg.type === 'file-end') {
+        const blob = new Blob(receivedChunks, { type: receivingFile.mime });
+        finalizeReceived(receivingFile.name, blob, receivingFile.size);
+        receivingFile = null; receivedChunks = []; receivedSize = 0;
+      }
+    } else {
+      receivedChunks.push(data);
+      receivedSize += data.byteLength;
+      if (receivingFile) updateReceivedProgress(receivingFile.name, receivedSize / receivingFile.size);
+    }
+  }
+
+  function copyText(id) {
+    const el = document.getElementById(id);
+    navigator.clipboard.writeText(el.value).catch(() => { el.select(); document.execCommand('copy'); });
+  }
+
+  function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+  function onDragLeave() { document.getElementById('drop-zone').classList.remove('drag-over'); }
+  function onDrop(e) { e.preventDefault(); onDragLeave(); addFiles(e.dataTransfer.files); }
+  function onFileSelect(e) { addFiles(e.target.files); }
+
+  function addFiles(fileList) {
+    for (const f of fileList) filesToSend.push(f);
+    renderQueue();
+    if (dc && dc.readyState === 'open') document.getElementById('btn-send').disabled = false;
+  }
+
+  function renderQueue() {
+    const q = document.getElementById('file-queue');
+    q.innerHTML = '';
+    filesToSend.forEach((f, i) => {
+      const ext = f.name.split('.').pop().toUpperCase().slice(0, 4) || 'FILE';
+      q.innerHTML += `<div class="file-item" id="fitem-${i}">
+        <div class="file-icon">${ext}</div>
+        <div style="flex:1;overflow:hidden;">
+          <div class="file-name">${f.name}</div>
+          <div class="progress-bar"><div class="progress-fill" id="fprog-${i}" style="width:0%"></div></div>
+        </div>
+        <div class="file-size">${fmtSize(f.size)}</div>
+        <div class="file-status" id="fstatus-${i}">Queued</div>
+      </div>`;
+    });
+  }
+
+  async function sendFiles() {
+    if (!dc || dc.readyState !== 'open') { alert('Not connected yet. Complete the connection steps first.'); return; }
+    document.getElementById('btn-send').disabled = true;
+    for (let i = 0; i < filesToSend.length; i++) await sendFile(filesToSend[i], i);
+    filesToSend = [];
+    setTimeout(() => { document.getElementById('file-queue').innerHTML = ''; }, 1500);
+  }
+
+  function sendFile(file, idx) {
+    return new Promise(res => {
+      dc.send(JSON.stringify({ type: 'file-start', name: file.name, size: file.size, mime: file.type }));
+      const reader = new FileReader();
+      let offset = 0;
+      function sendChunk() {
+        reader.readAsArrayBuffer(file.slice(offset, offset + CHUNK));
+      }
+      reader.onload = e => {
+        dc.send(e.target.result);
+        offset += e.target.result.byteLength;
+        const pct = Math.min(100, Math.round(offset / file.size * 100));
+        document.getElementById(`fprog-${idx}`).style.width = pct + '%';
+        document.getElementById(`fstatus-${idx}`).textContent = pct + '%';
+        if (offset < file.size) {
+          dc.bufferedAmount > CHUNK * 8 ? setTimeout(sendChunk, 50) : sendChunk();
+        } else {
+          dc.send(JSON.stringify({ type: 'file-end', name: file.name }));
+          document.getElementById(`fstatus-${idx}`).textContent = 'Sent ✓';
+          res();
+        }
+      };
+      sendChunk();
+    });
+  }
+
+  function addReceivedPlaceholder(info) {
+    const q = document.getElementById('received-queue');
+    if (q.querySelector('p')) q.innerHTML = '';
+    const ext = info.name.split('.').pop().toUpperCase().slice(0, 4) || 'FILE';
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.id = 'ritem-' + info.name;
+    div.innerHTML = `<div class="file-icon">${ext}</div>
+      <div style="flex:1;overflow:hidden;">
+        <div class="file-name">${info.name}</div>
+        <div class="progress-bar"><div class="progress-fill" id="rprog-${info.name.replace(/\W/g,'_')}" style="width:0%"></div></div>
+      </div>
+      <div class="file-size">${fmtSize(info.size)}</div>
+      <div class="file-status" id="rstatus-${info.name.replace(/\W/g,'_')}">0%</div>`;
+    q.appendChild(div);
+  }
+
+  function updateReceivedProgress(name, pct) {
+    const key = name.replace(/\W/g, '_');
+    const pb = document.getElementById('rprog-' + key);
+    const st = document.getElementById('rstatus-' + key);
+    if (pb) pb.style.width = Math.round(pct * 100) + '%';
+    if (st) st.textContent = Math.round(pct * 100) + '%';
+  }
+
+  function finalizeReceived(name, blob, size) {
+    const item = document.getElementById('ritem-' + name);
+    if (item) {
+      const url = URL.createObjectURL(blob);
+      const ext = name.split('.').pop().toUpperCase().slice(0, 4) || 'FILE';
+      item.className = 'received-item';
+      item.innerHTML = `<div class="file-icon" style="background:#e6f2d9;color:#27500a;">${ext}</div>
+        <div style="flex:1;overflow:hidden;">
+          <div class="file-name" style="color:#27500a;">${name}</div>
+          <div style="font-size:11px;color:#3b6d11;">${fmtSize(size)} — received</div>
+        </div>
+        <a href="${url}" download="${name}" class="dl-btn">Download</a>`;
+    }
+  }
+
+  function fmtSize(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return Math.round(b / 1024) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+</script>
+</body>
+</html>
