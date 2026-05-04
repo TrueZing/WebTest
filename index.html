@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>P2P WebRTC File Share | 🔗 Link-Based Handshake</title>
+    <title>One-Link WebRTC File Share | Truly Single Link</title>
     <style>
         * {
             box-sizing: border-box;
-            font-family: system-ui, 'Segoe UI', 'Inter', 'SF Pro Text', sans-serif;
+            font-family: system-ui, 'Segoe UI', 'Inter', sans-serif;
         }
-
         body {
             background: linear-gradient(145deg, #101214 0%, #1a1d24 100%);
             min-height: 100vh;
@@ -19,171 +18,83 @@
             margin: 0;
             padding: 20px;
         }
-
         .glass-card {
             background: rgba(25, 30, 38, 0.75);
             backdrop-filter: blur(12px);
             border-radius: 2.5rem;
-            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.4);
             padding: 1.8rem;
             width: 100%;
-            max-width: 1200px;
-            transition: all 0.2s ease;
+            max-width: 1100px;
         }
-
         h1 {
             font-size: 1.9rem;
             font-weight: 600;
-            margin: 0 0 0.25rem 0;
             background: linear-gradient(135deg, #E6F7FF, #9AD0F5);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            letter-spacing: -0.3px;
         }
-
         .sub {
             color: #8e9aaf;
             margin-bottom: 2rem;
             border-left: 3px solid #3b82f6;
             padding-left: 12px;
-            font-size: 0.9rem;
         }
-
-        .grid-2col {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.8rem;
-        }
-
-        .peer-panel {
-            flex: 1;
-            min-width: 280px;
-            background: rgba(0, 0, 0, 0.35);
-            border-radius: 1.8rem;
-            padding: 1.4rem;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .peer-title {
-            font-weight: 600;
-            font-size: 1.3rem;
-            margin-bottom: 1.2rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #cdd9ff;
-        }
-
-        .badge {
-            background: #2e3a4e;
-            padding: 4px 10px;
-            border-radius: 40px;
-            font-size: 0.7rem;
-            font-weight: 400;
-            color: #b9d0f0;
-        }
-
-        .connection-status {
+        .status-area {
             background: #1e2a36;
-            padding: 10px 14px;
+            padding: 12px 20px;
             border-radius: 60px;
-            font-size: 0.85rem;
+            text-align: center;
             margin-bottom: 1.5rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-            justify-content: center;
             font-weight: 500;
         }
-
-        .status-dot {
+        .dot {
+            display: inline-block;
             width: 10px;
             height: 10px;
             border-radius: 10px;
             background: #6c757d;
-            display: inline-block;
+            margin-right: 8px;
         }
-
-        .status-dot.connected {
-            background: #2ecc71;
-            box-shadow: 0 0 6px #2ecc71;
-        }
-
-        .status-dot.connecting {
-            background: #f39c12;
-            animation: pulse 1.2s infinite;
-        }
-
+        .dot.connected { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
+        .dot.connecting { background: #f39c12; animation: pulse 1s infinite; }
+        .dot.waiting { background: #3b82f6; animation: pulse 1s infinite; }
         @keyframes pulse {
             0% { opacity: 0.4; transform: scale(0.9);}
             100% { opacity: 1; transform: scale(1.2);}
         }
-
         button {
             background: #1f2a3e;
             border: none;
-            padding: 10px 18px;
+            padding: 10px 20px;
             border-radius: 2rem;
-            font-weight: 500;
-            color: #eef5ff;
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
-        }
-
-        button.primary {
-            background: #3b82f6;
             color: white;
-            box-shadow: 0 2px 8px rgba(59,130,246,0.2);
+            cursor: pointer;
+            margin: 5px;
         }
-
-        button.primary:hover {
-            background: #2563eb;
-            transform: scale(0.98);
+        button.primary { background: #3b82f6; }
+        button.primary:hover { background: #2563eb; }
+        button.success { background: #10b981; }
+        .link-box {
+            background: #0f1117;
+            border-radius: 1rem;
+            padding: 15px;
+            margin: 15px 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.8rem;
+            border: 1px solid #2d3748;
         }
-
-        button.success {
-            background: #10b981;
-        }
-
-        button.success:hover {
-            background: #059669;
-        }
-
-        button:hover {
-            background: #2d3a50;
-        }
-
         .file-dropzone {
             border: 2px dashed #3b4b62;
             border-radius: 1.5rem;
-            padding: 1.5rem 1rem;
+            padding: 1.5rem;
             text-align: center;
             margin: 1rem 0;
-            background: rgba(0, 0, 0, 0.2);
-            transition: 0.2s;
             cursor: pointer;
         }
-
-        .file-dropzone:hover {
-            border-color: #3b82f6;
-            background: rgba(59,130,246,0.05);
-        }
-
-        .file-info {
-            margin-top: 12px;
-            font-size: 0.8rem;
-            background: #1e2a32;
-            border-radius: 80px;
-            padding: 6px 12px;
-            display: inline-block;
-        }
-
+        .file-dropzone:hover { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
         .progress-bar {
             width: 100%;
             height: 6px;
@@ -192,15 +103,12 @@
             margin: 12px 0;
             overflow: hidden;
         }
-
         .progress-fill {
             width: 0%;
             height: 100%;
             background: #3b82f6;
-            border-radius: 10px;
-            transition: width 0.2s ease;
+            transition: width 0.2s;
         }
-
         .log-area {
             background: #0b0e12b3;
             border-radius: 1.2rem;
@@ -212,501 +120,450 @@
             font-size: 0.75rem;
             color: #9aaec0;
         }
-
-        .log-entry {
-            border-bottom: 1px solid #2a3340;
-            padding: 5px 0;
-            word-break: break-word;
-        }
-
-        .flex-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 12px;
-        }
-
-        .link-box {
+        .log-entry { border-bottom: 1px solid #2a3340; padding: 5px 0; }
+        .flex-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+        input, textarea {
             background: #0f1117;
+            border: 1px solid #2d3748;
             border-radius: 1rem;
             padding: 10px;
-            margin-top: 12px;
-            font-size: 0.7rem;
-            word-break: break-all;
-            font-family: monospace;
-            border: 1px solid #2d3748;
-        }
-
-        hr {
-            border-color: #2f3b48;
-            margin: 1rem 0;
-        }
-
-        @media (max-width: 760px) {
-            .glass-card { padding: 1rem; }
-            .peer-panel { padding: 1rem; }
+            color: white;
+            width: 100%;
         }
     </style>
 </head>
 <body>
 <div class="glass-card">
-    <h1>🔗 WebRTC FileShare · Link-Based</h1>
-    <div class="sub">✨ Share a link — No copy-paste, no server, fully encrypted P2P</div>
+    <h1>🔗 One-Link WebRTC FileShare</h1>
+    <div class="sub">✨ Single link — copy once, share once, done! (Powered by temporary pastebin)</div>
 
-    <div class="grid-2col">
-        <!-- LEFT: Host (Offerer) -->
-        <div class="peer-panel">
-            <div class="peer-title">
-                🖥️ Host <span class="badge">Step 1: Create Link</span>
-            </div>
-            <div class="connection-status" id="offerStatus">
-                <span class="status-dot" id="offerDot"></span> <span id="offerStatusText">Disconnected</span>
-            </div>
-            
-            <button id="createHostLinkBtn" class="primary">🔗 Create Shareable Host Link</button>
-            
-            <div id="hostLinkContainer" style="display:none;">
+    <div class="status-area">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Initializing...</span>
+    </div>
+
+    <div class="flex-row">
+        <div style="flex:1">
+            <button id="createSessionBtn" class="primary">📎 1. Create Shareable Link</button>
+            <div id="sessionLinkBox" style="display:none;">
                 <div class="link-box">
-                    <strong>📎 Share this link with peer:</strong><br>
-                    <span id="hostLinkUrl" style="color:#6ee7ff;"></span>
+                    <strong>🔗 Send this ONE link to your peer:</strong><br>
+                    <span id="sessionLink" style="color:#6ee7ff;"></span>
                 </div>
-                <button id="copyHostLinkBtn" class="success" style="margin-top:8px; width:100%;">📋 Copy Link</button>
-            </div>
-
-            <div style="margin-top: 16px;">
-                <strong>📁 Send File</strong>
-                <div id="fileDropZone" class="file-dropzone">
-                    📂 Drag & drop or click to select file
-                    <input type="file" id="fileInput" style="display:none" />
-                </div>
-                <div id="selectedFileInfo" class="file-info"></div>
-                <button id="sendFileBtn" class="primary" disabled>🚀 Send File to Peer</button>
-                <div id="sendProgressArea">
-                    <div class="progress-bar"><div id="sendProgressFill" class="progress-fill"></div></div>
-                    <div id="sendSpeedInfo" style="font-size:0.7rem;"></div>
-                </div>
+                <button id="copyLinkBtn" class="success">📋 Copy Link</button>
             </div>
         </div>
+        <div style="flex:1">
+            <div class="link-box" style="background:#10b98120;">
+                💡 <strong>How it works:</strong><br>
+                1️⃣ Click "Create Shareable Link" → copy the link<br>
+                2️⃣ Send the link to your peer (any messenger)<br>
+                3️⃣ Both open the same link → auto-connect!<br>
+                🔒 Uses temporary pastebin for signaling only
+            </div>
+        </div>
+    </div>
 
-        <!-- RIGHT: Peer (Answerer) -->
-        <div class="peer-panel">
-            <div class="peer-title">
-                👥 Peer <span class="badge">Step 2: Open Link</span>
-            </div>
-            <div class="connection-status" id="answerStatus">
-                <span class="status-dot" id="answerDot"></span> <span id="answerStatusText">Waiting for link...</span>
-            </div>
-            
-            <div class="link-box" style="margin-bottom: 12px;">
-                💡 <strong>How to connect:</strong><br>
-                1. Host clicks "Create Shareable Host Link"<br>
-                2. Share the generated link (WhatsApp, email, etc.)<br>
-                3. You open the link → Auto-connects!
-            </div>
-            
-            <div id="peerReadyIndicator" style="display:none;" class="success" style="background:#10b98120; padding:8px; border-radius:1rem; text-align:center;">
-                ✅ Offer received! Establishing connection...
-            </div>
+    <hr>
 
-            <hr>
+    <div class="flex-row">
+        <div style="flex:1">
+            <div><strong>📁 Send File</strong></div>
+            <div class="file-dropzone" id="dropZone">
+                📂 Drag & drop or click to select file
+                <input type="file" id="fileInput" style="display:none">
+            </div>
+            <div id="fileInfo" class="link-box" style="display:none;"></div>
+            <button id="sendFileBtn" class="primary" disabled>🚀 Send File</button>
+            <div class="progress-bar"><div id="sendProgress" class="progress-fill"></div></div>
+            <div id="sendSpeed" style="font-size:0.7rem;"></div>
+        </div>
+        <div style="flex:1">
             <div><strong>📥 Received Files</strong></div>
-            <div id="receivedFilesList" style="margin-top: 12px; max-height: 180px; overflow-y: auto; font-size:0.8rem;"></div>
-            <div id="receiveProgressArea">
-                <div class="progress-bar"><div id="receiveProgressFill" class="progress-fill"></div></div>
-                <div id="receiveStatusMsg"></div>
-            </div>
+            <div id="receivedFiles" style="max-height: 200px; overflow-y: auto;"></div>
+            <div class="progress-bar"><div id="receiveProgress" class="progress-fill"></div></div>
+            <div id="receiveStatus"></div>
         </div>
     </div>
 
-    <div class="log-area" id="globalLog">
-        <div class="log-entry">🚀 Link-based WebRTC — Share links, not SDP text!</div>
-    </div>
+    <div class="log-area" id="log"></div>
 </div>
 
 <script>
-    // ---------- Global state ----------
-    let peerConnection = null;
-    let dataChannel = null;
-    let isOfferer = false;
+    // Configuration - using免费的临时存储服务 (temporary public pastebin)
+    // Using "paste.rs" which allows anonymous POST/GET without API keys
+    const SIGNALING_URL = 'https://paste.rs';  // Simple public pastebin
+    
+    let pc = null;
+    let dc = null;
     let connected = false;
+    let myRole = null; // 'initiator' or 'joiner'
+    let sessionId = null;
+    let pollInterval = null;
     let pendingFile = null;
-    let sendingInProgress = false;
-    let fileChunkSize = 16384;
-    let receivedFileBuffer = [];
-    let expectedFileSize = 0;
-    let receivedFileSize = 0;
-    let receivingFileName = "";
-    let receiveStartTime = 0;
-    let sendStartTime = 0;
-    let totalSentBytes = 0;
-    let hasProcessedHash = false;
-
+    let sending = false;
+    let receivedBuffer = [];
+    let expectedSize = 0;
+    let fileName = "";
+    let sendStart = 0;
+    let sentBytes = 0;
+    
     // DOM elements
-    const offerStatusSpan = document.getElementById("offerStatusText");
-    const offerDot = document.getElementById("offerDot");
-    const answerStatusSpan = document.getElementById("answerStatusText");
-    const answerDot = document.getElementById("answerDot");
-    const createHostLinkBtn = document.getElementById("createHostLinkBtn");
-    const copyHostLinkBtn = document.getElementById("copyHostLinkBtn");
-    const hostLinkContainer = document.getElementById("hostLinkContainer");
-    const hostLinkUrl = document.getElementById("hostLinkUrl");
-    const sendFileBtn = document.getElementById("sendFileBtn");
-    const fileInput = document.getElementById("fileInput");
-    const fileDropZone = document.getElementById("fileDropZone");
-    const selectedFileInfo = document.getElementById("selectedFileInfo");
-    const sendProgressFill = document.getElementById("sendProgressFill");
-    const sendSpeedInfo = document.getElementById("sendSpeedInfo");
-    const receiveProgressFill = document.getElementById("receiveProgressFill");
-    const receiveStatusMsg = document.getElementById("receiveStatusMsg");
-    const receivedFilesList = document.getElementById("receivedFilesList");
-    const globalLogDiv = document.getElementById("globalLog");
-    const peerReadyIndicator = document.getElementById("peerReadyIndicator");
-
-    function addLog(msg, isError = false) {
-        const logEntry = document.createElement("div");
-        logEntry.className = "log-entry";
-        logEntry.style.color = isError ? "#ffaa99" : "#b9d0f0";
-        logEntry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
-        globalLogDiv.appendChild(logEntry);
-        globalLogDiv.scrollTop = globalLogDiv.scrollHeight;
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const createSessionBtn = document.getElementById('createSessionBtn');
+    const sessionLinkBox = document.getElementById('sessionLinkBox');
+    const sessionLink = document.getElementById('sessionLink');
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const sendFileBtn = document.getElementById('sendFileBtn');
+    const sendProgress = document.getElementById('sendProgress');
+    const sendSpeed = document.getElementById('sendSpeed');
+    const receivedFiles = document.getElementById('receivedFiles');
+    const receiveProgress = document.getElementById('receiveProgress');
+    const receiveStatus = document.getElementById('receiveStatus');
+    const logDiv = document.getElementById('log');
+    
+    function addLog(msg, isErr = false) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.style.color = isErr ? '#ffaa99' : '#b9d0f0';
+        entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logDiv.appendChild(entry);
+        logDiv.scrollTop = logDiv.scrollHeight;
         console.log(msg);
     }
-
-    function updateUI(connectedFlag) {
-        connected = connectedFlag;
-        if (isOfferer) {
-            offerStatusSpan.innerText = connectedFlag ? "🔗 Connected" : "⚡ Disconnected";
-            offerDot.className = connectedFlag ? "status-dot connected" : "status-dot";
-            sendFileBtn.disabled = !connectedFlag || sendingInProgress;
-        } else {
-            answerStatusSpan.innerText = connectedFlag ? "🔗 Connected" : "⚡ Disconnected";
-            answerDot.className = connectedFlag ? "status-dot connected" : "status-dot";
-        }
-        if (!connectedFlag && sendingInProgress) resetFileTransferUI();
+    
+    function updateStatus(text, state) {
+        statusText.innerText = text;
+        statusDot.className = 'dot';
+        if (state === 'connected') statusDot.classList.add('connected');
+        else if (state === 'connecting') statusDot.classList.add('connecting');
+        else if (state === 'waiting') statusDot.classList.add('waiting');
     }
-
-    function resetFileTransferUI() {
-        sendingInProgress = false;
-        pendingFile = null;
-        selectedFileInfo.innerText = "";
-        sendProgressFill.style.width = "0%";
-        sendSpeedInfo.innerText = "";
-        if (sendFileBtn) sendFileBtn.disabled = !connected;
-    }
-
-    function resetReceiveUI() {
-        receiveProgressFill.style.width = "0%";
-        receiveStatusMsg.innerText = "";
-        receivedFileBuffer = [];
-        expectedFileSize = 0;
-        receivedFileSize = 0;
-    }
-
-    function closeConnection() {
-        if (dataChannel) {
-            dataChannel.close();
-            dataChannel = null;
-        }
-        if (peerConnection) {
-            peerConnection.close();
-            peerConnection = null;
-        }
-        connected = false;
-        updateUI(false);
-    }
-
-    function setupDataChannelHandlers(channel, role) {
-        channel.onopen = () => {
-            addLog(`✅ DataChannel opened (${role})`);
-            connected = true;
-            updateUI(true);
-            resetFileTransferUI();
-            if (role === "receiver") resetReceiveUI();
-        };
-        channel.onclose = () => {
-            addLog(`⚠️ DataChannel closed (${role})`);
-            connected = false;
-            updateUI(false);
-            resetFileTransferUI();
-        };
-        channel.onerror = (err) => addLog(`DataChannel error: ${err}`, true);
-
-        channel.onmessage = (event) => {
-            if (typeof event.data === "string") {
-                try {
-                    const msg = JSON.parse(event.data);
-                    if (msg.type === "fileMeta") {
-                        receivingFileName = msg.name;
-                        expectedFileSize = msg.size;
-                        receivedFileBuffer = [];
-                        receivedFileSize = 0;
-                        receiveStartTime = performance.now();
-                        addLog(`📥 Receiving: ${msg.name} (${(msg.size / 1024).toFixed(1)} KB)`);
-                        receiveStatusMsg.innerText = `Receiving ${msg.name} ...`;
-                        receiveProgressFill.style.width = "0%";
-                    } else if (msg.type === "fileEnd") {
-                        const blob = new Blob(receivedFileBuffer, { type: "application/octet-stream" });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = receivingFileName;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        const duration = (performance.now() - receiveStartTime) / 1000;
-                        const speed = (expectedFileSize / 1024 / 1024 / duration).toFixed(2);
-                        addLog(`✅ Saved: ${receivingFileName} (${(expectedFileSize/1024).toFixed(1)} KB, ${duration.toFixed(2)} sec)`);
-                        receiveStatusMsg.innerText = `✔️ Received: ${receivingFileName}`;
-                        const fileItem = document.createElement("div");
-                        fileItem.style.background = "#1f2a36";
-                        fileItem.style.padding = "6px 8px";
-                        fileItem.style.borderRadius = "30px";
-                        fileItem.style.marginBottom = "6px";
-                        fileItem.innerText = `📎 ${receivingFileName} (${(expectedFileSize/1024).toFixed(1)} KB)`;
-                        receivedFilesList.prepend(fileItem);
-                        resetReceiveUI();
-                    }
-                } catch(e) { addLog(`Parse error: ${event.data}`, false); }
-            } else if (event.data instanceof ArrayBuffer) {
-                if (expectedFileSize === 0) return;
-                receivedFileBuffer.push(event.data);
-                receivedFileSize += event.data.byteLength;
-                const percent = (receivedFileSize / expectedFileSize) * 100;
-                receiveProgressFill.style.width = `${percent}%`;
-            }
-        };
-    }
-
-    async function createPeerConnection(roleIsOfferer) {
-        if (peerConnection) closeConnection();
-        const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }] };
-        peerConnection = new RTCPeerConnection(config);
-        isOfferer = roleIsOfferer;
-
-        peerConnection.onicecandidate = (event) => {
-            if (!event.candidate && isOfferer && peerConnection.localDescription) {
-                // ICE gathering complete - update the link with final SDP
-                updateHostLinkWithSDP();
-            }
-        };
-
-        peerConnection.onconnectionstatechange = () => {
-            addLog(`Connection state: ${peerConnection.connectionState}`);
-            if (peerConnection.connectionState === "connected") {
-                connected = true;
-                updateUI(true);
-            } else if (peerConnection.connectionState === "failed" || peerConnection.connectionState === "disconnected") {
-                connected = false;
-                updateUI(false);
-            }
-        };
-
-        peerConnection.ondatachannel = (event) => {
-            addLog("📡 Incoming DataChannel received.");
-            dataChannel = event.channel;
-            setupDataChannelHandlers(dataChannel, "receiver");
-        };
-
-        if (roleIsOfferer) {
-            dataChannel = peerConnection.createDataChannel("fileTransferChannel", { ordered: true, maxRetransmits: 3 });
-            setupDataChannelHandlers(dataChannel, "sender");
-        }
-    }
-
-    // Compress & encode SDP into URL hash
-    function encodeSDPToHash(sdp, type) {
-        const data = {
-            t: type, // 'offer' or 'answer'
-            s: sdp
-        };
-        const jsonStr = JSON.stringify(data);
-        // Use base64 to make hash shorter
-        const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
-        return encoded;
-    }
-
-    function decodeHashToSDP(hash) {
+    
+    async function uploadToPastebin(content) {
         try {
-            const decoded = decodeURIComponent(escape(atob(hash)));
-            const data = JSON.parse(decoded);
-            return { type: data.t, sdp: data.s };
+            const response = await fetch(SIGNALING_URL, {
+                method: 'POST',
+                body: content,
+                headers: { 'Content-Type': 'text/plain' }
+            });
+            const url = await response.text();
+            return url.trim();
         } catch (e) {
-            addLog("Failed to decode link", true);
+            addLog(`Failed to upload: ${e}`, true);
             return null;
         }
     }
-
-    async function updateHostLinkWithSDP() {
-        if (!peerConnection || !peerConnection.localDescription) return;
-        const sdp = peerConnection.localDescription.sdp;
-        const encoded = encodeSDPToHash(sdp, 'offer');
-        const link = `${window.location.origin}${window.location.pathname}#${encoded}`;
-        hostLinkUrl.innerText = link;
-        hostLinkContainer.style.display = 'block';
-        addLog("🔗 Shareable link created! Send this to your peer.");
-    }
-
-    // Host creates offer and generates link
-    createHostLinkBtn.onclick = async () => {
-        await createPeerConnection(true);
+    
+    async function downloadFromPastebin(url) {
         try {
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            addLog("📡 Creating offer & gathering ICE candidates...");
-            // Link will appear when ICE gathering completes (onicecandidate with null)
-            // But also set a timeout in case gathering is slow
-            setTimeout(() => {
-                if (peerConnection && peerConnection.localDescription && !hostLinkContainer.style.display === 'block') {
-                    updateHostLinkWithSDP();
+            const response = await fetch(url);
+            return await response.text();
+        } catch (e) {
+            return null;
+        }
+    }
+    
+    async function sendSignal(data) {
+        const content = JSON.stringify(data);
+        const url = await uploadToPastebin(content);
+        if (url && sessionId) {
+            // Store the URL in session storage for this session
+            const key = `signal_${sessionId}_${data.type}`;
+            localStorage.setItem(key, url);
+            return url;
+        }
+        return null;
+    }
+    
+    async function waitForSignal(type, timeout = 30000) {
+        const key = `signal_${sessionId}_${type}`;
+        const startTime = Date.now();
+        while (Date.now() - startTime < timeout) {
+            const url = localStorage.getItem(key);
+            if (url) {
+                localStorage.removeItem(key);
+                const content = await downloadFromPastebin(url);
+                if (content) {
+                    try {
+                        return JSON.parse(content);
+                    } catch(e) { return null; }
                 }
-            }, 2000);
-        } catch (err) {
-            addLog(`Error creating offer: ${err}`, true);
+            }
+            await new Promise(r => setTimeout(r, 500));
         }
-    };
-
-    copyHostLinkBtn.onclick = () => {
-        const link = hostLinkUrl.innerText;
-        navigator.clipboard.writeText(link);
-        addLog("✅ Link copied to clipboard!");
-        copyHostLinkBtn.innerText = "✓ Copied!";
-        setTimeout(() => copyHostLinkBtn.innerText = "📋 Copy Link", 2000);
-    };
-
-    // AUTO-DETECT: If URL has hash, process as peer (answerer)
-    async function processHashAndConnect() {
-        if (hasProcessedHash) return;
-        const hash = window.location.hash.slice(1); // Remove #
-        if (!hash) return;
+        return null;
+    }
+    
+    function closeConnection() {
+        if (dc) { dc.close(); dc = null; }
+        if (pc) { pc.close(); pc = null; }
+        connected = false;
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    }
+    
+    function setupDataChannel(role) {
+        if (!pc) return;
         
-        hasProcessedHash = true;
-        addLog("🔍 Detected connection link! Establishing secure channel...");
-        peerReadyIndicator.style.display = 'block';
-        
-        const decoded = decodeHashToSDP(hash);
-        if (!decoded || decoded.type !== 'offer') {
-            addLog("Invalid or expired link", true);
-            return;
+        if (role === 'initiator') {
+            dc = pc.createDataChannel('fileChannel', { ordered: true });
+            setupChannelEvents(dc);
         }
         
-        await createPeerConnection(false);
-        try {
-            const offerDesc = new RTCSessionDescription({ type: "offer", sdp: decoded.sdp });
-            await peerConnection.setRemoteDescription(offerDesc);
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
+        pc.ondatachannel = (e) => {
+            addLog('📡 Received data channel');
+            dc = e.channel;
+            setupChannelEvents(dc);
+        };
+        
+        pc.onicecandidate = async (e) => {
+            if (e.candidate) {
+                // Send ICE candidate via signaling
+                if (sessionId) {
+                    await sendSignal({ type: 'ice', candidate: e.candidate });
+                }
+            } else {
+                addLog('ICE gathering complete');
+                if (role === 'initiator' && pc.localDescription) {
+                    await sendSignal({ type: 'offer', sdp: pc.localDescription.sdp });
+                    addLog('📤 Offer sent via signaling');
+                } else if (role === 'joiner' && pc.localDescription) {
+                    await sendSignal({ type: 'answer', sdp: pc.localDescription.sdp });
+                    addLog('📤 Answer sent via signaling');
+                }
+            }
+        };
+        
+        pc.onconnectionstatechange = () => {
+            addLog(`Connection state: ${pc.connectionState}`);
+            if (pc.connectionState === 'connected') {
+                connected = true;
+                updateStatus('✅ Connected! Ready to send files', 'connected');
+                sendFileBtn.disabled = false;
+                if (pollInterval) clearInterval(pollInterval);
+            } else if (pc.connectionState === 'failed') {
+                updateStatus('❌ Connection failed', 'waiting');
+                closeConnection();
+            }
+        };
+    }
+    
+    function setupChannelEvents(channel) {
+        channel.onopen = () => {
+            addLog('🔓 Data channel open');
+            connected = true;
+            updateStatus('✅ Connected! Ready to send files', 'connected');
+            sendFileBtn.disabled = false;
+        };
+        channel.onclose = () => {
+            addLog('🔒 Data channel closed');
+            connected = false;
+            updateStatus('Disconnected', 'waiting');
+            sendFileBtn.disabled = true;
+        };
+        channel.onmessage = async (e) => {
+            if (typeof e.data === 'string') {
+                try {
+                    const msg = JSON.parse(e.data);
+                    if (msg.type === 'fileMeta') {
+                        fileName = msg.name;
+                        expectedSize = msg.size;
+                        receivedBuffer = [];
+                        addLog(`📥 Receiving: ${msg.name} (${(msg.size/1024).toFixed(1)} KB)`);
+                        receiveStatus.innerText = `Receiving ${msg.name}...`;
+                        receiveProgress.style.width = '0%';
+                    } else if (msg.type === 'fileEnd') {
+                        const blob = new Blob(receivedBuffer);
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        addLog(`✅ Saved: ${fileName}`);
+                        receiveStatus.innerText = `✔️ Received: ${fileName}`;
+                        const item = document.createElement('div');
+                        item.style.background = '#1f2a36';
+                        item.style.padding = '8px';
+                        item.style.borderRadius = '30px';
+                        item.style.marginBottom = '6px';
+                        item.innerText = `📎 ${fileName} (${(expectedSize/1024).toFixed(1)} KB)`;
+                        receivedFiles.prepend(item);
+                        receiveProgress.style.width = '0%';
+                        receivedBuffer = [];
+                    }
+                } catch(err) {}
+            } else if (e.data instanceof ArrayBuffer) {
+                receivedBuffer.push(e.data);
+                const received = receivedBuffer.reduce((acc, buf) => acc + buf.byteLength, 0);
+                const percent = (received / expectedSize) * 100;
+                receiveProgress.style.width = `${percent}%`;
+            }
+        };
+    }
+    
+    // Listen for ICE candidates
+    async function listenForSignals() {
+        while (sessionId && !connected) {
+            const signal = await waitForSignal('ice', 1000);
+            if (signal && signal.candidate && pc) {
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+                    addLog('❄️ ICE candidate added');
+                } catch(e) {}
+            }
             
-            // For answerer: we could also generate an answer link, but not needed for P2P to complete
-            // Once ICE completes, connection will establish automatically
-            addLog("✅ Answer created, connection establishing...");
-            answerStatusSpan.innerText = "Connecting...";
-            answerDot.className = "status-dot connecting";
+            // Also check for answer if we're initiator
+            if (myRole === 'initiator' && !pc?.remoteDescription) {
+                const answer = await waitForSignal('answer', 1000);
+                if (answer && answer.sdp) {
+                    await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: answer.sdp }));
+                    addLog('📥 Answer received');
+                }
+            }
             
-            // Clear hash from URL to keep it clean (optional)
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (err) {
-            addLog(`Connection error: ${err}`, true);
-            peerReadyIndicator.style.display = 'none';
+            // Check for offer if we're joiner
+            if (myRole === 'joiner' && !pc?.remoteDescription) {
+                const offer = await waitForSignal('offer', 1000);
+                if (offer && offer.sdp) {
+                    await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: offer.sdp }));
+                    addLog('📥 Offer received, creating answer...');
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                }
+            }
+            
+            await new Promise(r => setTimeout(r, 100));
         }
     }
-
-    // File handling (identical to original)
+    
+    // Create session (initiator)
+    createSessionBtn.onclick = async () => {
+        sessionId = Math.random().toString(36).substring(2, 15);
+        myRole = 'initiator';
+        
+        // Create link with session ID
+        const link = `${window.location.origin}${window.location.pathname}?session=${sessionId}`;
+        sessionLink.innerText = link;
+        sessionLinkBox.style.display = 'block';
+        
+        updateStatus('🔗 Share this link with your peer', 'waiting');
+        addLog(`Session created! Share this link: ${link}`);
+        
+        // Setup WebRTC
+        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        setupDataChannel('initiator');
+        
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        
+        // Start listening for signals
+        listenForSignals();
+    };
+    
+    copyLinkBtn.onclick = () => {
+        navigator.clipboard.writeText(sessionLink.innerText);
+        addLog('✅ Link copied!');
+        copyLinkBtn.innerText = '✓ Copied!';
+        setTimeout(() => copyLinkBtn.innerText = '📋 Copy Link', 2000);
+    };
+    
+    // Auto-join if session in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoSession = urlParams.get('session');
+    if (autoSession) {
+        sessionId = autoSession;
+        myRole = 'joiner';
+        updateStatus('🔗 Joining session...', 'connecting');
+        addLog(`Auto-joining session: ${sessionId}`);
+        
+        // Setup WebRTC as joiner
+        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        setupDataChannel('joiner');
+        
+        // Start listening for offer
+        listenForSignals();
+        
+        // Remove session from URL for cleanliness
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+        updateStatus('Ready to create a session', 'waiting');
+    }
+    
+    // File handling
     function selectFile(file) {
         if (!file) return;
-        if (file.size > 500 * 1024 * 1024) {
-            addLog("⚠️ Large file >500MB may be slow", false);
-        }
         pendingFile = file;
-        selectedFileInfo.innerText = `📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-        sendFileBtn.disabled = !connected || sendingInProgress;
-        addLog(`Selected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+        fileInfo.style.display = 'block';
+        fileInfo.innerHTML = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+        addLog(`Selected: ${file.name}`);
+        sendFileBtn.disabled = !connected;
     }
-
-    fileDropZone.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", (e) => {
-        if (e.target.files.length) selectFile(e.target.files[0]);
-    });
-    fileDropZone.addEventListener("dragover", (e) => { e.preventDefault(); fileDropZone.style.borderColor = "#3b82f6"; });
-    fileDropZone.addEventListener("dragleave", () => { fileDropZone.style.borderColor = "#3b4b62"; });
-    fileDropZone.addEventListener("drop", (e) => {
+    
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => e.target.files[0] && selectFile(e.target.files[0]));
+    dropZone.addEventListener('dragover', (e) => e.preventDefault());
+    dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
-        fileDropZone.style.borderColor = "#3b4b62";
-        if (e.dataTransfer.files.length) selectFile(e.dataTransfer.files[0]);
+        e.dataTransfer.files[0] && selectFile(e.dataTransfer.files[0]);
     });
-
+    
     sendFileBtn.onclick = async () => {
-        if (!connected || !dataChannel || dataChannel.readyState !== "open") {
-            addLog("Not connected yet. Wait for connection.", true);
+        if (!connected || !dc || dc.readyState !== 'open') {
+            addLog('Not connected', true);
             return;
         }
         if (!pendingFile) {
-            addLog("No file selected.", true);
+            addLog('No file selected', true);
             return;
         }
-        if (sendingInProgress) return;
+        if (sending) return;
         
         const file = pendingFile;
-        sendingInProgress = true;
+        sending = true;
         sendFileBtn.disabled = true;
-        totalSentBytes = 0;
-        sendStartTime = performance.now();
-
-        const meta = { type: "fileMeta", name: file.name, size: file.size };
-        dataChannel.send(JSON.stringify(meta));
-        addLog(`📤 Sending: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
-
-        const chunkSize = fileChunkSize;
+        sentBytes = 0;
+        sendStart = performance.now();
+        
+        dc.send(JSON.stringify({ type: 'fileMeta', name: file.name, size: file.size }));
+        
+        const chunkSize = 16384;
         let offset = 0;
-        const reader = new FileReader();
         
-        const updateProgress = () => {
-            const percent = (totalSentBytes / file.size) * 100;
-            sendProgressFill.style.width = `${percent}%`;
-            if (totalSentBytes > 0 && sendStartTime) {
-                const elapsed = (performance.now() - sendStartTime) / 1000;
-                const speed = (totalSentBytes / 1024 / 1024 / elapsed).toFixed(2);
-                sendSpeedInfo.innerText = `📈 ${(totalSentBytes/1024).toFixed(0)}/${(file.size/1024).toFixed(0)} KB · ${speed} MB/s`;
-            }
-        };
-
-        reader.onload = async (e) => {
-            if (e.target.result instanceof ArrayBuffer) {
-                dataChannel.send(e.target.result);
-                totalSentBytes += e.target.result.byteLength;
-                updateProgress();
+        const sendNext = () => {
+            const slice = file.slice(offset, offset + chunkSize);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                dc.send(e.target.result);
+                sentBytes += e.target.result.byteLength;
+                const percent = (sentBytes / file.size) * 100;
+                sendProgress.style.width = `${percent}%`;
+                const elapsed = (performance.now() - sendStart) / 1000;
+                const speed = (sentBytes / 1024 / 1024 / elapsed).toFixed(2);
+                sendSpeed.innerText = `${(sentBytes/1024).toFixed(0)}/${(file.size/1024).toFixed(0)} KB · ${speed} MB/s`;
                 offset += e.target.result.byteLength;
-                if (offset < file.size) {
-                    readSlice(offset);
-                } else {
-                    dataChannel.send(JSON.stringify({ type: "fileEnd" }));
-                    addLog(`✅ Sent: ${file.name} in ${((performance.now()-sendStartTime)/1000).toFixed(2)} sec`);
-                    sendingInProgress = false;
+                if (offset < file.size) sendNext();
+                else {
+                    dc.send(JSON.stringify({ type: 'fileEnd' }));
+                    addLog(`✅ Sent ${file.name} in ${elapsed.toFixed(2)}s`);
+                    sending = false;
                     sendFileBtn.disabled = !connected;
-                    resetFileTransferUI();
                     pendingFile = null;
-                    selectedFileInfo.innerText = "";
-                    sendSpeedInfo.innerText = "";
-                    sendProgressFill.style.width = "0%";
+                    fileInfo.style.display = 'none';
+                    sendProgress.style.width = '0%';
+                    sendSpeed.innerText = '';
                 }
-            }
-        };
-        
-        const readSlice = (start) => {
-            const slice = file.slice(start, start + chunkSize);
+            };
             reader.readAsArrayBuffer(slice);
         };
-        
-        reader.onerror = (err) => {
-            addLog(`File read error: ${err}`, true);
-            sendingInProgress = false;
-            sendFileBtn.disabled = !connected;
-        };
-        readSlice(0);
+        sendNext();
     };
-
-    // Initialize - check for hash on load
-    processHashAndConnect();
-    updateUI(false);
-    addLog("✨ Ready! Click 'Create Shareable Host Link' to start.");
+    
+    addLog('✨ One-Link WebRTC - Create a session and share the link!');
 </script>
 </body>
 </html>
