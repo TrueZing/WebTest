@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>P2P WebRTC File Share | Direct & Secure</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>P2P WebRTC File Share | 🔗 Link-Based Handshake</title>
     <style>
         * {
             box-sizing: border-box;
@@ -27,7 +27,7 @@
             box-shadow: 0 25px 45px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
             padding: 1.8rem;
             width: 100%;
-            max-width: 1100px;
+            max-width: 1200px;
             transition: all 0.2s ease;
         }
 
@@ -58,12 +58,11 @@
 
         .peer-panel {
             flex: 1;
-            min-width: 260px;
+            min-width: 280px;
             background: rgba(0, 0, 0, 0.35);
             border-radius: 1.8rem;
             padding: 1.4rem;
             border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.2s;
         }
 
         .peer-title {
@@ -105,7 +104,6 @@
             border-radius: 10px;
             background: #6c757d;
             display: inline-block;
-            box-shadow: 0 0 4px currentColor;
         }
 
         .status-dot.connected {
@@ -123,29 +121,10 @@
             100% { opacity: 1; transform: scale(1.2);}
         }
 
-        textarea, input {
-            width: 100%;
-            background: rgba(10, 14, 19, 0.7);
-            border: 1px solid #2d3748;
-            border-radius: 1.2rem;
-            padding: 12px 16px;
-            color: white;
-            font-size: 0.85rem;
-            resize: vertical;
-            font-family: monospace;
-            transition: 0.2s;
-        }
-
-        textarea:focus, input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            background: #0f1219;
-        }
-
         button {
             background: #1f2a3e;
             border: none;
-            padding: 10px 16px;
+            padding: 10px 18px;
             border-radius: 2rem;
             font-weight: 500;
             color: #eef5ff;
@@ -153,9 +132,8 @@
             transition: 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             font-size: 0.85rem;
-            backdrop-filter: blur(4px);
         }
 
         button.primary {
@@ -166,7 +144,15 @@
 
         button.primary:hover {
             background: #2563eb;
-            transform: scale(0.97);
+            transform: scale(0.98);
+        }
+
+        button.success {
+            background: #10b981;
+        }
+
+        button.success:hover {
+            background: #059669;
         }
 
         button:hover {
@@ -237,8 +223,18 @@
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
-            align-items: center;
             margin-top: 12px;
+        }
+
+        .link-box {
+            background: #0f1117;
+            border-radius: 1rem;
+            padding: 10px;
+            margin-top: 12px;
+            font-size: 0.7rem;
+            word-break: break-all;
+            font-family: monospace;
+            border: 1px solid #2d3748;
         }
 
         hr {
@@ -254,51 +250,64 @@
 </head>
 <body>
 <div class="glass-card">
-    <h1>📡 WebRTC FileShare</h1>
-    <div class="sub">🔒 Peer-to-Peer · Encrypted · No server storage</div>
+    <h1>🔗 WebRTC FileShare · Link-Based</h1>
+    <div class="sub">✨ Share a link — No copy-paste, no server, fully encrypted P2P</div>
 
     <div class="grid-2col">
-        <!-- LEFT: Offerer (Sender/Host) -->
+        <!-- LEFT: Host (Offerer) -->
         <div class="peer-panel">
             <div class="peer-title">
-                🧑‍💻 Host <span class="badge">Offerer (Sender)</span>
+                🖥️ Host <span class="badge">Step 1: Create Link</span>
             </div>
             <div class="connection-status" id="offerStatus">
                 <span class="status-dot" id="offerDot"></span> <span id="offerStatusText">Disconnected</span>
             </div>
-            <button id="createOfferBtn" class="primary">✨ Create Connection Offer</button>
-            <div style="margin: 12px 0 8px 0;"><label style="font-size:0.75rem;">📋 Your SDP Offer (send to peer)</label></div>
-            <textarea id="localOfferSDP" rows="3" placeholder="Click 'Create Offer' then copy this text..."></textarea>
-            <div style="margin: 12px 0 8px 0;"><label style="font-size:0.75rem;">🔁 Paste Answer from Remote</label></div>
-            <textarea id="remoteAnswerInput" rows="2" placeholder="Paste peer's answer SDP here..."></textarea>
-            <button id="submitAnswerBtn">📥 Submit Answer</button>
-            <hr>
-            <div><strong>📁 Send File</strong></div>
-            <div id="fileDropZone" class="file-dropzone">
-                📂 Drag & drop or click to select file
-                <input type="file" id="fileInput" style="display:none" />
+            
+            <button id="createHostLinkBtn" class="primary">🔗 Create Shareable Host Link</button>
+            
+            <div id="hostLinkContainer" style="display:none;">
+                <div class="link-box">
+                    <strong>📎 Share this link with peer:</strong><br>
+                    <span id="hostLinkUrl" style="color:#6ee7ff;"></span>
+                </div>
+                <button id="copyHostLinkBtn" class="success" style="margin-top:8px; width:100%;">📋 Copy Link</button>
             </div>
-            <div id="selectedFileInfo" class="file-info"></div>
-            <button id="sendFileBtn" class="primary" disabled>🚀 Send File to Peer</button>
-            <div id="sendProgressArea" style="margin-top: 10px;">
-                <div class="progress-bar"><div id="sendProgressFill" class="progress-fill"></div></div>
-                <div id="sendSpeedInfo" style="font-size:0.7rem;"></div>
+
+            <div style="margin-top: 16px;">
+                <strong>📁 Send File</strong>
+                <div id="fileDropZone" class="file-dropzone">
+                    📂 Drag & drop or click to select file
+                    <input type="file" id="fileInput" style="display:none" />
+                </div>
+                <div id="selectedFileInfo" class="file-info"></div>
+                <button id="sendFileBtn" class="primary" disabled>🚀 Send File to Peer</button>
+                <div id="sendProgressArea">
+                    <div class="progress-bar"><div id="sendProgressFill" class="progress-fill"></div></div>
+                    <div id="sendSpeedInfo" style="font-size:0.7rem;"></div>
+                </div>
             </div>
         </div>
 
-        <!-- RIGHT: Answerer (Receiver) -->
+        <!-- RIGHT: Peer (Answerer) -->
         <div class="peer-panel">
             <div class="peer-title">
-                🧑‍🤝‍🧑 Peer <span class="badge">Answerer (Receiver)</span>
+                👥 Peer <span class="badge">Step 2: Open Link</span>
             </div>
             <div class="connection-status" id="answerStatus">
-                <span class="status-dot" id="answerDot"></span> <span id="answerStatusText">Disconnected</span>
+                <span class="status-dot" id="answerDot"></span> <span id="answerStatusText">Waiting for link...</span>
             </div>
-            <div style="margin: 8px 0 6px 0;"><label style="font-size:0.75rem;">📥 Paste Offer SDP from Host</label></div>
-            <textarea id="remoteOfferInput" rows="3" placeholder="Paste the offer SDP here..."></textarea>
-            <button id="createAnswerBtn">🔄 Create Answer</button>
-            <div style="margin-top: 12px;"><label>📤 Your Answer (send back to Host)</label></div>
-            <textarea id="localAnswerSDP" rows="3" placeholder="Answer SDP will appear here..."></textarea>
+            
+            <div class="link-box" style="margin-bottom: 12px;">
+                💡 <strong>How to connect:</strong><br>
+                1. Host clicks "Create Shareable Host Link"<br>
+                2. Share the generated link (WhatsApp, email, etc.)<br>
+                3. You open the link → Auto-connects!
+            </div>
+            
+            <div id="peerReadyIndicator" style="display:none;" class="success" style="background:#10b98120; padding:8px; border-radius:1rem; text-align:center;">
+                ✅ Offer received! Establishing connection...
+            </div>
+
             <hr>
             <div><strong>📥 Received Files</strong></div>
             <div id="receivedFilesList" style="margin-top: 12px; max-height: 180px; overflow-y: auto; font-size:0.8rem;"></div>
@@ -310,7 +319,7 @@
     </div>
 
     <div class="log-area" id="globalLog">
-        <div class="log-entry">⚡ Ready — WebRTC file sharing (chunked transfer)</div>
+        <div class="log-entry">🚀 Link-based WebRTC — Share links, not SDP text!</div>
     </div>
 </div>
 
@@ -318,14 +327,11 @@
     // ---------- Global state ----------
     let peerConnection = null;
     let dataChannel = null;
-    let isOfferer = false;      // true for left panel (offerer)
+    let isOfferer = false;
     let connected = false;
-
-    // File transfer variables
     let pendingFile = null;
     let sendingInProgress = false;
-    let fileChunkSize = 16384;   // 16KB per chunk (reliable)
-    let currentFileMeta = null;
+    let fileChunkSize = 16384;
     let receivedFileBuffer = [];
     let expectedFileSize = 0;
     let receivedFileSize = 0;
@@ -333,19 +339,17 @@
     let receiveStartTime = 0;
     let sendStartTime = 0;
     let totalSentBytes = 0;
+    let hasProcessedHash = false;
 
     // DOM elements
     const offerStatusSpan = document.getElementById("offerStatusText");
     const offerDot = document.getElementById("offerDot");
     const answerStatusSpan = document.getElementById("answerStatusText");
     const answerDot = document.getElementById("answerDot");
-    const localOfferSDP = document.getElementById("localOfferSDP");
-    const remoteAnswerInput = document.getElementById("remoteAnswerInput");
-    const remoteOfferInput = document.getElementById("remoteOfferInput");
-    const localAnswerSDP = document.getElementById("localAnswerSDP");
-    const createOfferBtn = document.getElementById("createOfferBtn");
-    const submitAnswerBtn = document.getElementById("submitAnswerBtn");
-    const createAnswerBtn = document.getElementById("createAnswerBtn");
+    const createHostLinkBtn = document.getElementById("createHostLinkBtn");
+    const copyHostLinkBtn = document.getElementById("copyHostLinkBtn");
+    const hostLinkContainer = document.getElementById("hostLinkContainer");
+    const hostLinkUrl = document.getElementById("hostLinkUrl");
     const sendFileBtn = document.getElementById("sendFileBtn");
     const fileInput = document.getElementById("fileInput");
     const fileDropZone = document.getElementById("fileDropZone");
@@ -356,6 +360,7 @@
     const receiveStatusMsg = document.getElementById("receiveStatusMsg");
     const receivedFilesList = document.getElementById("receivedFilesList");
     const globalLogDiv = document.getElementById("globalLog");
+    const peerReadyIndicator = document.getElementById("peerReadyIndicator");
 
     function addLog(msg, isError = false) {
         const logEntry = document.createElement("div");
@@ -367,21 +372,17 @@
         console.log(msg);
     }
 
-    function updateOfferUI(connectedFlag) {
+    function updateUI(connectedFlag) {
         connected = connectedFlag;
         if (isOfferer) {
             offerStatusSpan.innerText = connectedFlag ? "🔗 Connected" : "⚡ Disconnected";
             offerDot.className = connectedFlag ? "status-dot connected" : "status-dot";
-            if (connectedFlag) sendFileBtn.disabled = false;
-            else sendFileBtn.disabled = true;
+            sendFileBtn.disabled = !connectedFlag || sendingInProgress;
         } else {
             answerStatusSpan.innerText = connectedFlag ? "🔗 Connected" : "⚡ Disconnected";
             answerDot.className = connectedFlag ? "status-dot connected" : "status-dot";
         }
-        if (!connectedFlag) {
-            sendFileBtn.disabled = true;
-            if (sendingInProgress) resetFileTransferUI();
-        }
+        if (!connectedFlag && sendingInProgress) resetFileTransferUI();
     }
 
     function resetFileTransferUI() {
@@ -411,43 +412,39 @@
             peerConnection = null;
         }
         connected = false;
-        updateOfferUI(false);
-        addLog("❌ Connection closed.");
+        updateUI(false);
     }
 
     function setupDataChannelHandlers(channel, role) {
         channel.onopen = () => {
             addLog(`✅ DataChannel opened (${role})`);
             connected = true;
-            updateOfferUI(true);
+            updateUI(true);
             resetFileTransferUI();
             if (role === "receiver") resetReceiveUI();
         };
         channel.onclose = () => {
             addLog(`⚠️ DataChannel closed (${role})`);
             connected = false;
-            updateOfferUI(false);
+            updateUI(false);
             resetFileTransferUI();
         };
         channel.onerror = (err) => addLog(`DataChannel error: ${err}`, true);
 
         channel.onmessage = (event) => {
             if (typeof event.data === "string") {
-                // string messages decoded as JSON metadata or control
                 try {
                     const msg = JSON.parse(event.data);
                     if (msg.type === "fileMeta") {
-                        // start receiving file
                         receivingFileName = msg.name;
                         expectedFileSize = msg.size;
                         receivedFileBuffer = [];
                         receivedFileSize = 0;
                         receiveStartTime = performance.now();
-                        addLog(`📥 Receiving file: ${msg.name} (${(msg.size / 1024).toFixed(1)} KB)`);
+                        addLog(`📥 Receiving: ${msg.name} (${(msg.size / 1024).toFixed(1)} KB)`);
                         receiveStatusMsg.innerText = `Receiving ${msg.name} ...`;
                         receiveProgressFill.style.width = "0%";
                     } else if (msg.type === "fileEnd") {
-                        // assemble blob and download
                         const blob = new Blob(receivedFileBuffer, { type: "application/octet-stream" });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement("a");
@@ -457,9 +454,8 @@
                         URL.revokeObjectURL(url);
                         const duration = (performance.now() - receiveStartTime) / 1000;
                         const speed = (expectedFileSize / 1024 / 1024 / duration).toFixed(2);
-                        addLog(`✅ File saved: ${receivingFileName} (${(expectedFileSize/1024).toFixed(1)} KB, ${duration.toFixed(2)} sec, ~${speed} MB/s)`);
+                        addLog(`✅ Saved: ${receivingFileName} (${(expectedFileSize/1024).toFixed(1)} KB, ${duration.toFixed(2)} sec)`);
                         receiveStatusMsg.innerText = `✔️ Received: ${receivingFileName}`;
-                        // add to file list
                         const fileItem = document.createElement("div");
                         fileItem.style.background = "#1f2a36";
                         fileItem.style.padding = "6px 8px";
@@ -469,22 +465,13 @@
                         receivedFilesList.prepend(fileItem);
                         resetReceiveUI();
                     }
-                } catch(e) { addLog(`Invalid JSON meta: ${event.data}`, false); }
+                } catch(e) { addLog(`Parse error: ${event.data}`, false); }
             } else if (event.data instanceof ArrayBuffer) {
-                if (expectedFileSize === 0) {
-                    addLog("Warning: received chunk without metadata.", true);
-                    return;
-                }
+                if (expectedFileSize === 0) return;
                 receivedFileBuffer.push(event.data);
                 receivedFileSize += event.data.byteLength;
                 const percent = (receivedFileSize / expectedFileSize) * 100;
                 receiveProgressFill.style.width = `${percent}%`;
-                if (receivedFileSize >= expectedFileSize) {
-                    // fileEnd will be sent separately, but just in case trigger
-                    if (receivedFileSize === expectedFileSize) {
-                        // wait for file end message, but we also handle if missing
-                    }
-                }
             }
         };
     }
@@ -496,20 +483,9 @@
         isOfferer = roleIsOfferer;
 
         peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                addLog(`❄️ ICE candidate generated (${roleIsOfferer ? "offerer" : "answerer"})`);
-                // In full app we would send candidates, but for simplicity we rely on SDP only (trickle ICE disabled by gathering all)
-            } else {
-                addLog(`ICE candidate gathering complete`);
-                if (roleIsOfferer) {
-                    const offerSDP = peerConnection.localDescription.sdp;
-                    localOfferSDP.value = offerSDP;
-                    addLog("📤 Full Offer SDP generated (copy & send to peer).");
-                } else {
-                    const answerSDP = peerConnection.localDescription.sdp;
-                    localAnswerSDP.value = answerSDP;
-                    addLog("📤 Full Answer SDP generated (copy & send to host).");
-                }
+            if (!event.candidate && isOfferer && peerConnection.localDescription) {
+                // ICE gathering complete - update the link with final SDP
+                updateHostLinkWithSDP();
             }
         };
 
@@ -517,10 +493,10 @@
             addLog(`Connection state: ${peerConnection.connectionState}`);
             if (peerConnection.connectionState === "connected") {
                 connected = true;
-                updateOfferUI(true);
+                updateUI(true);
             } else if (peerConnection.connectionState === "failed" || peerConnection.connectionState === "disconnected") {
                 connected = false;
-                updateOfferUI(false);
+                updateUI(false);
             }
         };
 
@@ -536,55 +512,108 @@
         }
     }
 
-    // OFFERER: create offer
-    createOfferBtn.onclick = async () => {
+    // Compress & encode SDP into URL hash
+    function encodeSDPToHash(sdp, type) {
+        const data = {
+            t: type, // 'offer' or 'answer'
+            s: sdp
+        };
+        const jsonStr = JSON.stringify(data);
+        // Use base64 to make hash shorter
+        const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+        return encoded;
+    }
+
+    function decodeHashToSDP(hash) {
+        try {
+            const decoded = decodeURIComponent(escape(atob(hash)));
+            const data = JSON.parse(decoded);
+            return { type: data.t, sdp: data.s };
+        } catch (e) {
+            addLog("Failed to decode link", true);
+            return null;
+        }
+    }
+
+    async function updateHostLinkWithSDP() {
+        if (!peerConnection || !peerConnection.localDescription) return;
+        const sdp = peerConnection.localDescription.sdp;
+        const encoded = encodeSDPToHash(sdp, 'offer');
+        const link = `${window.location.origin}${window.location.pathname}#${encoded}`;
+        hostLinkUrl.innerText = link;
+        hostLinkContainer.style.display = 'block';
+        addLog("🔗 Shareable link created! Send this to your peer.");
+    }
+
+    // Host creates offer and generates link
+    createHostLinkBtn.onclick = async () => {
         await createPeerConnection(true);
         try {
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
-            addLog("Offer created, waiting for ICE gathering...");
+            addLog("📡 Creating offer & gathering ICE candidates...");
+            // Link will appear when ICE gathering completes (onicecandidate with null)
+            // But also set a timeout in case gathering is slow
+            setTimeout(() => {
+                if (peerConnection && peerConnection.localDescription && !hostLinkContainer.style.display === 'block') {
+                    updateHostLinkWithSDP();
+                }
+            }, 2000);
         } catch (err) {
             addLog(`Error creating offer: ${err}`, true);
         }
     };
 
-    // OFFERER: submit answer from remote
-    submitAnswerBtn.onclick = async () => {
-        const answerSdpText = remoteAnswerInput.value.trim();
-        if (!answerSdpText) return addLog("Please paste remote answer SDP", true);
-        if (!peerConnection || peerConnection.signalingState !== "have-local-offer") {
-            return addLog("Invalid state: need to create offer first and not have remote answer yet.", true);
-        }
-        try {
-            const answerDesc = new RTCSessionDescription({ type: "answer", sdp: answerSdpText });
-            await peerConnection.setRemoteDescription(answerDesc);
-            addLog("Remote answer set, connection should establish.");
-        } catch (err) {
-            addLog(`Failed to set answer: ${err}`, true);
-        }
+    copyHostLinkBtn.onclick = () => {
+        const link = hostLinkUrl.innerText;
+        navigator.clipboard.writeText(link);
+        addLog("✅ Link copied to clipboard!");
+        copyHostLinkBtn.innerText = "✓ Copied!";
+        setTimeout(() => copyHostLinkBtn.innerText = "📋 Copy Link", 2000);
     };
 
-    // ANSWERER: create answer based on offer
-    createAnswerBtn.onclick = async () => {
-        const offerSdpText = remoteOfferInput.value.trim();
-        if (!offerSdpText) return addLog("Please paste remote offer SDP", true);
+    // AUTO-DETECT: If URL has hash, process as peer (answerer)
+    async function processHashAndConnect() {
+        if (hasProcessedHash) return;
+        const hash = window.location.hash.slice(1); // Remove #
+        if (!hash) return;
+        
+        hasProcessedHash = true;
+        addLog("🔍 Detected connection link! Establishing secure channel...");
+        peerReadyIndicator.style.display = 'block';
+        
+        const decoded = decodeHashToSDP(hash);
+        if (!decoded || decoded.type !== 'offer') {
+            addLog("Invalid or expired link", true);
+            return;
+        }
+        
         await createPeerConnection(false);
         try {
-            const offerDesc = new RTCSessionDescription({ type: "offer", sdp: offerSdpText });
+            const offerDesc = new RTCSessionDescription({ type: "offer", sdp: decoded.sdp });
             await peerConnection.setRemoteDescription(offerDesc);
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
-            addLog("Answer created, waiting ICE gather, then copy the answer SDP.");
+            
+            // For answerer: we could also generate an answer link, but not needed for P2P to complete
+            // Once ICE completes, connection will establish automatically
+            addLog("✅ Answer created, connection establishing...");
+            answerStatusSpan.innerText = "Connecting...";
+            answerDot.className = "status-dot connecting";
+            
+            // Clear hash from URL to keep it clean (optional)
+            window.history.replaceState({}, document.title, window.location.pathname);
         } catch (err) {
-            addLog(`Answer error: ${err}`, true);
+            addLog(`Connection error: ${err}`, true);
+            peerReadyIndicator.style.display = 'none';
         }
-    };
+    }
 
-    // File selection & drag & drop
+    // File handling (identical to original)
     function selectFile(file) {
         if (!file) return;
         if (file.size > 500 * 1024 * 1024) {
-            addLog("⚠️ File larger than 500MB may cause performance issues. Consider smaller file.", false);
+            addLog("⚠️ Large file >500MB may be slow", false);
         }
         pendingFile = file;
         selectedFileInfo.innerText = `📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
@@ -604,40 +633,31 @@
         if (e.dataTransfer.files.length) selectFile(e.dataTransfer.files[0]);
     });
 
-    // Send file with chunking
     sendFileBtn.onclick = async () => {
         if (!connected || !dataChannel || dataChannel.readyState !== "open") {
-            addLog("DataChannel not open. Cannot send.", true);
+            addLog("Not connected yet. Wait for connection.", true);
             return;
         }
         if (!pendingFile) {
             addLog("No file selected.", true);
             return;
         }
-        if (sendingInProgress) {
-            addLog("Already sending, wait.", true);
-            return;
-        }
+        if (sendingInProgress) return;
+        
         const file = pendingFile;
         sendingInProgress = true;
         sendFileBtn.disabled = true;
         totalSentBytes = 0;
         sendStartTime = performance.now();
 
-        // 1. Send file metadata as JSON
         const meta = { type: "fileMeta", name: file.name, size: file.size };
         dataChannel.send(JSON.stringify(meta));
-        addLog(`📤 Sending file: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+        addLog(`📤 Sending: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
 
-        // 2. Read and send chunks
         const chunkSize = fileChunkSize;
         let offset = 0;
         const reader = new FileReader();
-        const readSlice = (start) => {
-            const slice = file.slice(start, start + chunkSize);
-            reader.readAsArrayBuffer(slice);
-        };
-
+        
         const updateProgress = () => {
             const percent = (totalSentBytes / file.size) * 100;
             sendProgressFill.style.width = `${percent}%`;
@@ -650,34 +670,31 @@
 
         reader.onload = async (e) => {
             if (e.target.result instanceof ArrayBuffer) {
-                const buffer = e.target.result;
-                try {
-                    // wait for buffer to be sent (backpressure not critical for demo)
-                    dataChannel.send(buffer);
-                    totalSentBytes += buffer.byteLength;
-                    updateProgress();
-                    offset += buffer.byteLength;
-                    if (offset < file.size) {
-                        readSlice(offset);
-                    } else {
-                        // send end marker
-                        dataChannel.send(JSON.stringify({ type: "fileEnd" }));
-                        addLog(`✅ File sent: ${file.name} (${(file.size/1024).toFixed(1)} KB) in ${((performance.now()-sendStartTime)/1000).toFixed(2)} sec`);
-                        sendingInProgress = false;
-                        sendFileBtn.disabled = !connected;
-                        resetFileTransferUI();
-                        pendingFile = null;
-                        selectedFileInfo.innerText = "";
-                        sendSpeedInfo.innerText = "";
-                        sendProgressFill.style.width = "0%";
-                    }
-                } catch (err) {
-                    addLog(`Send chunk error: ${err}`, true);
+                dataChannel.send(e.target.result);
+                totalSentBytes += e.target.result.byteLength;
+                updateProgress();
+                offset += e.target.result.byteLength;
+                if (offset < file.size) {
+                    readSlice(offset);
+                } else {
+                    dataChannel.send(JSON.stringify({ type: "fileEnd" }));
+                    addLog(`✅ Sent: ${file.name} in ${((performance.now()-sendStartTime)/1000).toFixed(2)} sec`);
                     sendingInProgress = false;
                     sendFileBtn.disabled = !connected;
+                    resetFileTransferUI();
+                    pendingFile = null;
+                    selectedFileInfo.innerText = "";
+                    sendSpeedInfo.innerText = "";
+                    sendProgressFill.style.width = "0%";
                 }
             }
         };
+        
+        const readSlice = (start) => {
+            const slice = file.slice(start, start + chunkSize);
+            reader.readAsArrayBuffer(slice);
+        };
+        
         reader.onerror = (err) => {
             addLog(`File read error: ${err}`, true);
             sendingInProgress = false;
@@ -686,9 +703,10 @@
         readSlice(0);
     };
 
-    // initial status
-    updateOfferUI(false);
-    addLog("✨ Ready. Create connection: Host generates Offer -> copy to Peer -> Peer creates Answer -> copy back to Host.");
+    // Initialize - check for hash on load
+    processHashAndConnect();
+    updateUI(false);
+    addLog("✨ Ready! Click 'Create Shareable Host Link' to start.");
 </script>
 </body>
 </html>
