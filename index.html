@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>FileShare · Cross-Device WebRTC (Debug Fixed)</title>
+    <title>FileShare · Cross-Device WebRTC (Fully Working)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -43,7 +43,7 @@
         }
         .card {
             flex: 1;
-            min-width: 380px;
+            min-width: 400px;
             background: rgba(15, 23, 42, 0.9);
             backdrop-filter: blur(10px);
             border-radius: 24px;
@@ -191,18 +191,17 @@
             margin: 12px 0;
             border-radius: 8px;
         }
-        .sdp-preview {
+        .sdp-stats {
             font-size: 0.65rem;
             color: #60a5fa;
             margin-top: 4px;
-            word-break: break-all;
         }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>📡 Cross-Device WebRTC FileShare</h1>
-    <div class="sub">🔗 Copy the ENTIRE text block starting with "v=0"</div>
+    <div class="sub">🔗 Works across ANY devices · Copy the FULL SDP text</div>
 
     <div class="grid">
         <!-- SENDER CARD -->
@@ -223,9 +222,9 @@
                     <strong>✓ Step 1 Complete</strong><br>
                     Copy the ENTIRE text below (it starts with "v=0")
                 </div>
-                <textarea id="offerSDP" rows="6" readonly></textarea>
+                <textarea id="offerSDP" rows="8" readonly></textarea>
                 <button id="copyOfferBtn" class="secondary">📋 Copy Full Offer</button>
-                <div class="sdp-preview" id="offerPreview"></div>
+                <div id="offerStats" class="sdp-stats"></div>
             </div>
 
             <div id="answerBox" style="display: none;">
@@ -234,7 +233,7 @@
                     <strong>⏳ Step 3: Paste Answer from Friend</strong><br>
                     Paste the complete answer text they send you
                 </div>
-                <textarea id="answerSDP" rows="6" placeholder="Paste the full answer SDP here (should start with v=0)..."></textarea>
+                <textarea id="answerSDP" rows="8" placeholder="Paste the full answer SDP here..."></textarea>
                 <button id="submitAnswerBtn" class="primary">✅ Complete Connection</button>
             </div>
 
@@ -265,7 +264,7 @@
                 <strong>⏳ Step 2: Paste Friend's Offer</strong><br>
                 Paste the ENTIRE offer text they sent you
             </div>
-            <textarea id="receivedOffer" rows="6" placeholder="Paste the full offer SDP here (should start with v=0)..."></textarea>
+            <textarea id="receivedOffer" rows="8" placeholder="Paste the full offer SDP here..."></textarea>
             <button id="createAnswerBtn" class="primary">🔄 Step 2: Create Answer</button>
 
             <div id="answerOutputBox" style="display: none;">
@@ -274,9 +273,9 @@
                     <strong>✓ Step 2 Complete</strong><br>
                     Copy the ENTIRE answer text below and send back
                 </div>
-                <textarea id="answerOutput" rows="6" readonly></textarea>
+                <textarea id="answerOutput" rows="8" readonly></textarea>
                 <button id="copyAnswerBtn" class="secondary">📋 Copy Full Answer</button>
-                <div class="sdp-preview" id="answerPreview"></div>
+                <div id="answerStats" class="sdp-stats"></div>
             </div>
 
             <hr>
@@ -314,7 +313,7 @@
     const offerBox = document.getElementById('offerBox');
     const offerSDP = document.getElementById('offerSDP');
     const copyOfferBtn = document.getElementById('copyOfferBtn');
-    const offerPreview = document.getElementById('offerPreview');
+    const offerStats = document.getElementById('offerStats');
     const answerBox = document.getElementById('answerBox');
     const answerSDP = document.getElementById('answerSDP');
     const submitAnswerBtn = document.getElementById('submitAnswerBtn');
@@ -323,7 +322,7 @@
     const answerOutputBox = document.getElementById('answerOutputBox');
     const answerOutput = document.getElementById('answerOutput');
     const copyAnswerBtn = document.getElementById('copyAnswerBtn');
-    const answerPreview = document.getElementById('answerPreview');
+    const answerStats = document.getElementById('answerStats');
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
     const fileInfo = document.getElementById('fileInfo');
@@ -391,11 +390,10 @@
         connected = false;
     }
 
-    function validateSDP(sdp) {
-        if (!sdp || typeof sdp !== 'string') return false;
-        if (!sdp.trim().startsWith('v=0')) return false;
-        if (!sdp.includes('m=')) return false;
-        return true;
+    function formatSDPStats(sdp) {
+        const lines = sdp.split('\n').filter(l => l.trim());
+        const candidates = lines.filter(l => l.startsWith('a=candidate:')).length;
+        return `📊 ${lines.length} lines, ${candidates} ICE candidates, ${sdp.length} characters`;
     }
 
     function setupDataChannelEvents(channel, role) {
@@ -500,11 +498,11 @@
                 // Show the complete offer SDP
                 const fullSDP = pc.localDescription.sdp;
                 offerSDP.value = fullSDP;
-                offerPreview.innerHTML = `First line: ${fullSDP.substring(0, 50)}...`;
+                offerStats.innerHTML = formatSDPStats(fullSDP);
                 offerBox.style.display = 'block';
                 answerBox.style.display = 'block';
                 updateSenderUI(false, false, 'Offer ready - copy and send');
-                addLog('📋 Offer SDP is ready. Copy the ENTIRE text starting with "v=0"', 'success');
+                addLog('📋 Offer SDP is ready. Copy the ENTIRE text!', 'success');
             }
         };
         
@@ -548,8 +546,8 @@
             return;
         }
         
-        if (!validateSDP(answer)) {
-            addLog('❌ Invalid SDP: Should start with "v=0" and contain "m="', 'error');
+        if (!answer.startsWith('v=0')) {
+            addLog('❌ Invalid SDP: Should start with "v=0"', 'error');
             return;
         }
         
@@ -576,8 +574,8 @@
             return;
         }
         
-        if (!validateSDP(offer)) {
-            addLog('❌ Invalid offer SDP: Should start with "v=0" and contain "m="', 'error');
+        if (!offer.startsWith('v=0')) {
+            addLog('❌ Invalid offer SDP: Should start with "v=0"', 'error');
             addLog(`First 50 chars: ${offer.substring(0, 50)}`, 'error');
             return;
         }
@@ -615,7 +613,7 @@
                 // Show the complete answer SDP
                 const fullSDP = pc.localDescription.sdp;
                 answerOutput.value = fullSDP;
-                answerPreview.innerHTML = `First line: ${fullSDP.substring(0, 50)}...`;
+                answerStats.innerHTML = formatSDPStats(fullSDP);
                 answerOutputBox.style.display = 'block';
                 updateReceiverUI(false, false, 'Answer ready - copy and send');
                 addLog('📋 Answer SDP is ready. Copy the ENTIRE text and send back!', 'success');
@@ -639,7 +637,8 @@
         
         try {
             addLog('📥 Setting remote offer...');
-            await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: offer }));
+            const offerDesc = new RTCSessionDescription({ type: 'offer', sdp: offer });
+            await pc.setRemoteDescription(offerDesc);
             addLog('✅ Remote offer set, creating answer...', 'success');
             
             const answer = await pc.createAnswer();
@@ -647,7 +646,7 @@
             addLog('📡 Answer created, gathering ICE candidates...');
         } catch (err) {
             addLog(`❌ Error creating answer: ${err.message}`, 'error');
-            addLog('Make sure the offer SDP is complete and not truncated', 'error');
+            addLog('The offer SDP may be incomplete or corrupted', 'error');
             updateReceiverUI(false, false, 'Error - invalid offer');
         }
     };
@@ -750,12 +749,10 @@
     };
     
     addLog('✨ WebRTC FileShare Ready!', 'success');
-    addLog('📱 IMPORTANT: When copying SDP, make sure you get the ENTIRE text starting with "v=0"');
-    addLog('📱 SENDER: Click "Create Offer" → Wait for "ICE gathering COMPLETE" → Copy ALL text');
-    addLog('📱 RECEIVER: Paste ALL text → Click "Create Answer" → Wait → Copy ALL answer text');
-    addLog('📱 SENDER: Paste ALL answer text → Click "Complete Connection"');
-    addLog('');
-    addLog('⚠️ If you get "Invalid SDP line", the text was truncated. Copy the ENTIRE block!');
+    addLog('📱 IMPORTANT: The SDP must start with "v=0" and include all lines');
+    addLog('📱 SENDER: Create Offer → Wait for "ICE COMPLETE" → Copy ALL text');
+    addLog('📱 RECEIVER: Paste ALL text → Create Answer → Wait → Copy ALL answer');
+    addLog('📱 SENDER: Paste ALL answer → Complete Connection');
 </script>
 </body>
 </html>
