@@ -3,203 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>One-Link WebRTC File Share | Truly Single Link</title>
+    <title>Simple FileShare · Two Links</title>
     <style>
         * {
             box-sizing: border-box;
             font-family: system-ui, 'Segoe UI', 'Inter', sans-serif;
         }
         body {
-            background: linear-gradient(145deg, #101214 0%, #1a1d24 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             margin: 0;
-            padding: 20px;
+            padding: 16px;
         }
-        .glass-card {
-            background: rgba(25, 30, 38, 0.75);
-            backdrop-filter: blur(12px);
-            border-radius: 2.5rem;
-            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.4);
-            padding: 1.8rem;
+        .container {
+            max-width: 1300px;
             width: 100%;
-            max-width: 1100px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
         }
         h1 {
-            font-size: 1.9rem;
-            font-weight: 600;
-            background: linear-gradient(135deg, #E6F7FF, #9AD0F5);
+            font-size: 2rem;
+            margin: 0;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
         }
         .sub {
-            color: #8e9aaf;
-            margin-bottom: 2rem;
-            border-left: 3px solid #3b82f6;
-            padding-left: 12px;
+            color: #94a3b8;
+            margin-top: 8px;
         }
-        .status-area {
-            background: #1e2a36;
-            padding: 12px 20px;
-            border-radius: 60px;
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+        .card {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .badge {
+            background: #3b82f6;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: normal;
+        }
+        .status {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 40px;
             text-align: center;
-            margin-bottom: 1.5rem;
-            font-weight: 500;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
         }
         .dot {
             display: inline-block;
             width: 10px;
             height: 10px;
             border-radius: 10px;
-            background: #6c757d;
             margin-right: 8px;
         }
-        .dot.connected { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
-        .dot.connecting { background: #f39c12; animation: pulse 1s infinite; }
-        .dot.waiting { background: #3b82f6; animation: pulse 1s infinite; }
+        .dot.red { background: #ef4444; }
+        .dot.green { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .dot.yellow { background: #eab308; animation: pulse 1s infinite; }
         @keyframes pulse {
-            0% { opacity: 0.4; transform: scale(0.9);}
-            100% { opacity: 1; transform: scale(1.2);}
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
         }
         button {
-            background: #1f2a3e;
+            background: #1e293b;
             border: none;
-            padding: 10px 20px;
-            border-radius: 2rem;
+            padding: 12px 20px;
+            border-radius: 40px;
             color: white;
+            font-weight: 500;
             cursor: pointer;
-            margin: 5px;
+            transition: all 0.2s;
+            margin: 4px;
         }
-        button.primary { background: #3b82f6; }
-        button.primary:hover { background: #2563eb; }
-        button.success { background: #10b981; }
+        button.primary {
+            background: #3b82f6;
+        }
+        button.primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        button.success {
+            background: #22c55e;
+        }
+        button.success:hover {
+            background: #16a34a;
+        }
         .link-box {
-            background: #0f1117;
-            border-radius: 1rem;
-            padding: 15px;
-            margin: 15px 0;
+            background: #0f172a;
+            border-radius: 16px;
+            padding: 16px;
+            margin: 16px 0;
             word-break: break-all;
             font-family: monospace;
             font-size: 0.8rem;
-            border: 1px solid #2d3748;
+            border: 1px solid #334155;
         }
-        .file-dropzone {
-            border: 2px dashed #3b4b62;
-            border-radius: 1.5rem;
-            padding: 1.5rem;
-            text-align: center;
-            margin: 1rem 0;
-            cursor: pointer;
+        .link-text {
+            color: #60a5fa;
+            font-size: 0.75rem;
         }
-        .file-dropzone:hover { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
-        .progress-bar {
+        input, textarea {
             width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 12px;
+            color: white;
+            font-size: 0.8rem;
+            margin: 8px 0;
+        }
+        .dropzone {
+            border: 2px dashed #334155;
+            border-radius: 20px;
+            padding: 24px;
+            text-align: center;
+            margin: 16px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .dropzone:hover {
+            border-color: #3b82f6;
+            background: rgba(59,130,246,0.05);
+        }
+        .progress-bar {
             height: 6px;
-            background: #2d3a44;
+            background: #1e293b;
             border-radius: 10px;
-            margin: 12px 0;
             overflow: hidden;
+            margin: 12px 0;
         }
         .progress-fill {
-            width: 0%;
             height: 100%;
             background: #3b82f6;
+            width: 0%;
             transition: width 0.2s;
         }
-        .log-area {
-            background: #0b0e12b3;
-            border-radius: 1.2rem;
-            padding: 0.8rem;
-            margin-top: 1.5rem;
+        .file-item {
+            background: #1e293b;
+            padding: 8px 12px;
+            border-radius: 30px;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+        }
+        .log {
+            background: #0f172a;
+            border-radius: 20px;
+            padding: 16px;
+            margin-top: 24px;
             max-height: 200px;
             overflow-y: auto;
             font-family: monospace;
-            font-size: 0.75rem;
-            color: #9aaec0;
+            font-size: 0.7rem;
         }
-        .log-entry { border-bottom: 1px solid #2a3340; padding: 5px 0; }
-        .flex-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
-        input, textarea {
-            background: #0f1117;
-            border: 1px solid #2d3748;
-            border-radius: 1rem;
-            padding: 10px;
-            color: white;
-            width: 100%;
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid #1e293b;
+            color: #94a3b8;
+        }
+        hr {
+            border-color: #334155;
+            margin: 20px 0;
+        }
+        .flex-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
     </style>
 </head>
 <body>
-<div class="glass-card">
-    <h1>🔗 One-Link WebRTC FileShare</h1>
-    <div class="sub">✨ Single link — copy once, share once, done! (Powered by temporary pastebin)</div>
-
-    <div class="status-area">
-        <span class="dot" id="statusDot"></span>
-        <span id="statusText">Initializing...</span>
+<div class="container">
+    <div class="header">
+        <h1>📁 Simple FileShare</h1>
+        <div class="sub">Two links · No servers · P2P encrypted</div>
     </div>
 
-    <div class="flex-row">
-        <div style="flex:1">
-            <button id="createSessionBtn" class="primary">📎 1. Create Shareable Link</button>
-            <div id="sessionLinkBox" style="display:none;">
+    <div class="grid">
+        <!-- SENDER CARD -->
+        <div class="card">
+            <div class="card-title">
+                📤 Sender
+                <span class="badge">Link 1 →</span>
+            </div>
+            <div class="status" id="senderStatus">
+                <span class="dot red" id="senderDot"></span>
+                <span id="senderStatusText">Not connected</span>
+            </div>
+
+            <button id="step1Btn" class="primary">🔗 1. Create Link 1</button>
+
+            <div id="link1Box" style="display: none;">
                 <div class="link-box">
-                    <strong>🔗 Send this ONE link to your peer:</strong><br>
-                    <span id="sessionLink" style="color:#6ee7ff;"></span>
+                    <strong>📋 Copy this link and send to your friend:</strong><br>
+                    <span id="link1Url" class="link-text"></span>
                 </div>
-                <button id="copyLinkBtn" class="success">📋 Copy Link</button>
+                <button id="copyLink1Btn" class="success">📋 Copy Link 1</button>
             </div>
-        </div>
-        <div style="flex:1">
-            <div class="link-box" style="background:#10b98120;">
-                💡 <strong>How it works:</strong><br>
-                1️⃣ Click "Create Shareable Link" → copy the link<br>
-                2️⃣ Send the link to your peer (any messenger)<br>
-                3️⃣ Both open the same link → auto-connect!<br>
-                🔒 Uses temporary pastebin for signaling only
-            </div>
-        </div>
-    </div>
 
-    <hr>
-
-    <div class="flex-row">
-        <div style="flex:1">
-            <div><strong>📁 Send File</strong></div>
-            <div class="file-dropzone" id="dropZone">
-                📂 Drag & drop or click to select file
-                <input type="file" id="fileInput" style="display:none">
+            <div id="step3Box" style="display: none;">
+                <hr>
+                <strong>🔗 3. Paste Link 2 from your friend:</strong>
+                <input type="text" id="link2Input" placeholder="Paste the second link here...">
+                <button id="completeBtn" class="primary">✅ Complete Connection</button>
             </div>
-            <div id="fileInfo" class="link-box" style="display:none;"></div>
-            <button id="sendFileBtn" class="primary" disabled>🚀 Send File</button>
+
+            <hr>
+            <div><strong>📁 Send a File</strong></div>
+            <div class="dropzone" id="dropzone">
+                📂 Drag & drop or click to select
+                <input type="file" id="fileInput" style="display: none;">
+            </div>
+            <div id="fileInfo" style="font-size: 0.8rem; margin: 8px 0;"></div>
+            <button id="sendBtn" class="primary" disabled>🚀 Send File</button>
             <div class="progress-bar"><div id="sendProgress" class="progress-fill"></div></div>
-            <div id="sendSpeed" style="font-size:0.7rem;"></div>
+            <div id="sendSpeed" style="font-size: 0.7rem;"></div>
         </div>
-        <div style="flex:1">
+
+        <!-- RECEIVER CARD -->
+        <div class="card">
+            <div class="card-title">
+                📥 Receiver
+                <span class="badge">← Link 2</span>
+            </div>
+            <div class="status" id="receiverStatus">
+                <span class="dot red" id="receiverDot"></span>
+                <span id="receiverStatusText">Waiting for link</span>
+            </div>
+
+            <div class="link-box" style="margin-bottom: 16px;">
+                💡 <strong>Simple:</strong><br>
+                1. Get Link 1 from sender<br>
+                2. Paste it below<br>
+                3. Send back Link 2
+            </div>
+
+            <strong>🔗 2. Paste Link 1 from sender:</strong>
+            <input type="text" id="link1Input" placeholder="Paste the first link here...">
+            <button id="processBtn" class="primary">🔄 Create Link 2</button>
+
+            <div id="link2Box" style="display: none;">
+                <div class="link-box">
+                    <strong>📋 Send this link back to sender:</strong><br>
+                    <span id="link2Url" class="link-text"></span>
+                </div>
+                <button id="copyLink2Btn" class="success">📋 Copy Link 2</button>
+            </div>
+
+            <hr>
             <div><strong>📥 Received Files</strong></div>
-            <div id="receivedFiles" style="max-height: 200px; overflow-y: auto;"></div>
+            <div id="receivedFiles"></div>
             <div class="progress-bar"><div id="receiveProgress" class="progress-fill"></div></div>
-            <div id="receiveStatus"></div>
+            <div id="receiveStatus" style="font-size: 0.8rem;"></div>
         </div>
     </div>
 
-    <div class="log-area" id="log"></div>
+    <div class="log" id="log"></div>
 </div>
 
 <script>
-    // Configuration - using免费的临时存储服务 (temporary public pastebin)
-    // Using "paste.rs" which allows anonymous POST/GET without API keys
-    const SIGNALING_URL = 'https://paste.rs';  // Simple public pastebin
-    
+    // State
     let pc = null;
     let dc = null;
     let connected = false;
-    let myRole = null; // 'initiator' or 'joiner'
-    let sessionId = null;
-    let pollInterval = null;
+    let myRole = null; // 'sender' or 'receiver'
+    let roomCode = null;
     let pendingFile = null;
     let sending = false;
     let receivedBuffer = [];
@@ -207,165 +299,264 @@
     let fileName = "";
     let sendStart = 0;
     let sentBytes = 0;
-    
-    // DOM elements
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-    const createSessionBtn = document.getElementById('createSessionBtn');
-    const sessionLinkBox = document.getElementById('sessionLinkBox');
-    const sessionLink = document.getElementById('sessionLink');
-    const copyLinkBtn = document.getElementById('copyLinkBtn');
-    const dropZone = document.getElementById('dropZone');
+
+    // DOM
+    const senderDot = document.getElementById('senderDot');
+    const senderStatusText = document.getElementById('senderStatusText');
+    const receiverDot = document.getElementById('receiverDot');
+    const receiverStatusText = document.getElementById('receiverStatusText');
+    const step1Btn = document.getElementById('step1Btn');
+    const link1Box = document.getElementById('link1Box');
+    const link1Url = document.getElementById('link1Url');
+    const copyLink1Btn = document.getElementById('copyLink1Btn');
+    const step3Box = document.getElementById('step3Box');
+    const link2Input = document.getElementById('link2Input');
+    const completeBtn = document.getElementById('completeBtn');
+    const link1Input = document.getElementById('link1Input');
+    const processBtn = document.getElementById('processBtn');
+    const link2Box = document.getElementById('link2Box');
+    const link2Url = document.getElementById('link2Url');
+    const copyLink2Btn = document.getElementById('copyLink2Btn');
+    const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
     const fileInfo = document.getElementById('fileInfo');
-    const sendFileBtn = document.getElementById('sendFileBtn');
+    const sendBtn = document.getElementById('sendBtn');
     const sendProgress = document.getElementById('sendProgress');
     const sendSpeed = document.getElementById('sendSpeed');
     const receivedFiles = document.getElementById('receivedFiles');
     const receiveProgress = document.getElementById('receiveProgress');
     const receiveStatus = document.getElementById('receiveStatus');
     const logDiv = document.getElementById('log');
-    
+
     function addLog(msg, isErr = false) {
         const entry = document.createElement('div');
         entry.className = 'log-entry';
-        entry.style.color = isErr ? '#ffaa99' : '#b9d0f0';
-        entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        entry.style.color = isErr ? '#f87171' : '#94a3b8';
+        entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
         logDiv.appendChild(entry);
         logDiv.scrollTop = logDiv.scrollHeight;
-        console.log(msg);
     }
-    
-    function updateStatus(text, state) {
-        statusText.innerText = text;
-        statusDot.className = 'dot';
-        if (state === 'connected') statusDot.classList.add('connected');
-        else if (state === 'connecting') statusDot.classList.add('connecting');
-        else if (state === 'waiting') statusDot.classList.add('waiting');
+
+    function updateSenderStatus(text, isConnected = false, isConnecting = false) {
+        senderStatusText.innerText = text;
+        if (isConnected) {
+            senderDot.className = 'dot green';
+        } else if (isConnecting) {
+            senderDot.className = 'dot yellow';
+        } else {
+            senderDot.className = 'dot red';
+        }
     }
-    
-    async function uploadToPastebin(content) {
+
+    function updateReceiverStatus(text, isConnected = false, isConnecting = false) {
+        receiverStatusText.innerText = text;
+        if (isConnected) {
+            receiverDot.className = 'dot green';
+        } else if (isConnecting) {
+            receiverDot.className = 'dot yellow';
+        } else {
+            receiverDot.className = 'dot red';
+        }
+    }
+
+    // Generate random code (4 chars for super short links)
+    function generateCode() {
+        return Math.random().toString(36).substring(2, 6).toUpperCase();
+    }
+
+    // Encode data to URL hash (short)
+    function encodeToHash(data) {
+        const json = JSON.stringify(data);
+        // Compress with base64
+        return btoa(unescape(encodeURIComponent(json)));
+    }
+
+    function decodeFromHash(hash) {
         try {
-            const response = await fetch(SIGNALING_URL, {
-                method: 'POST',
-                body: content,
-                headers: { 'Content-Type': 'text/plain' }
-            });
-            const url = await response.text();
-            return url.trim();
-        } catch (e) {
-            addLog(`Failed to upload: ${e}`, true);
-            return null;
-        }
+            const decoded = decodeURIComponent(escape(atob(hash)));
+            return JSON.parse(decoded);
+        } catch(e) { return null; }
     }
-    
-    async function downloadFromPastebin(url) {
-        try {
-            const response = await fetch(url);
-            return await response.text();
-        } catch (e) {
-            return null;
-        }
-    }
-    
-    async function sendSignal(data) {
-        const content = JSON.stringify(data);
-        const url = await uploadToPastebin(content);
-        if (url && sessionId) {
-            // Store the URL in session storage for this session
-            const key = `signal_${sessionId}_${data.type}`;
-            localStorage.setItem(key, url);
-            return url;
-        }
-        return null;
-    }
-    
-    async function waitForSignal(type, timeout = 30000) {
-        const key = `signal_${sessionId}_${type}`;
-        const startTime = Date.now();
-        while (Date.now() - startTime < timeout) {
-            const url = localStorage.getItem(key);
-            if (url) {
-                localStorage.removeItem(key);
-                const content = await downloadFromPastebin(url);
-                if (content) {
-                    try {
-                        return JSON.parse(content);
-                    } catch(e) { return null; }
-                }
-            }
-            await new Promise(r => setTimeout(r, 500));
-        }
-        return null;
-    }
-    
-    function closeConnection() {
-        if (dc) { dc.close(); dc = null; }
-        if (pc) { pc.close(); pc = null; }
-        connected = false;
-        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
-    }
-    
-    function setupDataChannel(role) {
-        if (!pc) return;
+
+    // SENDER: Step 1 - Create Link 1 (with offer)
+    step1Btn.onclick = async () => {
+        roomCode = generateCode();
+        myRole = 'sender';
         
-        if (role === 'initiator') {
-            dc = pc.createDataChannel('fileChannel', { ordered: true });
-            setupChannelEvents(dc);
-        }
+        // Create peer connection
+        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        
+        // Setup data channel
+        dc = pc.createDataChannel('fileChannel', { ordered: true });
+        setupChannelEvents(dc, 'sender');
         
         pc.ondatachannel = (e) => {
-            addLog('📡 Received data channel');
             dc = e.channel;
-            setupChannelEvents(dc);
+            setupChannelEvents(dc, 'sender');
         };
         
         pc.onicecandidate = async (e) => {
-            if (e.candidate) {
-                // Send ICE candidate via signaling
-                if (sessionId) {
-                    await sendSignal({ type: 'ice', candidate: e.candidate });
-                }
-            } else {
-                addLog('ICE gathering complete');
-                if (role === 'initiator' && pc.localDescription) {
-                    await sendSignal({ type: 'offer', sdp: pc.localDescription.sdp });
-                    addLog('📤 Offer sent via signaling');
-                } else if (role === 'joiner' && pc.localDescription) {
-                    await sendSignal({ type: 'answer', sdp: pc.localDescription.sdp });
-                    addLog('📤 Answer sent via signaling');
-                }
+            if (!e.candidate && pc.localDescription) {
+                // ICE complete - create link with offer
+                const data = {
+                    type: 'offer',
+                    code: roomCode,
+                    sdp: pc.localDescription.sdp
+                };
+                const hash = encodeToHash(data);
+                const link = `${window.location.origin}${window.location.pathname}#${hash}`;
+                link1Url.innerText = link;
+                link1Box.style.display = 'block';
+                step3Box.style.display = 'block';
+                addLog(`✅ Link 1 created! Send this to your friend. Code: ${roomCode}`);
+                updateSenderStatus('Waiting for friend to connect...', false, true);
             }
         };
         
         pc.onconnectionstatechange = () => {
-            addLog(`Connection state: ${pc.connectionState}`);
+            addLog(`Connection: ${pc.connectionState}`);
             if (pc.connectionState === 'connected') {
                 connected = true;
-                updateStatus('✅ Connected! Ready to send files', 'connected');
-                sendFileBtn.disabled = false;
-                if (pollInterval) clearInterval(pollInterval);
+                updateSenderStatus('✅ Connected! Ready to send', true);
+                sendBtn.disabled = false;
             } else if (pc.connectionState === 'failed') {
-                updateStatus('❌ Connection failed', 'waiting');
-                closeConnection();
+                updateSenderStatus('❌ Connection failed', false);
             }
         };
-    }
-    
-    function setupChannelEvents(channel) {
+        
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        addLog('📡 Creating connection...');
+    };
+
+    copyLink1Btn.onclick = () => {
+        navigator.clipboard.writeText(link1Url.innerText);
+        addLog('✅ Link 1 copied!');
+        copyLink1Btn.innerText = '✓ Copied!';
+        setTimeout(() => copyLink1Btn.innerText = '📋 Copy Link 1', 2000);
+    };
+
+    // SENDER: Step 3 - Complete with Link 2
+    completeBtn.onclick = async () => {
+        const link2 = link2Input.value.trim();
+        if (!link2) {
+            addLog('❌ Paste Link 2 first', true);
+            return;
+        }
+        
+        const hash = link2.split('#')[1];
+        if (!hash) {
+            addLog('❌ Invalid link', true);
+            return;
+        }
+        
+        const data = decodeFromHash(hash);
+        if (!data || data.type !== 'answer') {
+            addLog('❌ Not a valid answer link', true);
+            return;
+        }
+        
+        await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
+        addLog('✅ Answer received, establishing connection...');
+        updateSenderStatus('Connecting...', false, true);
+    };
+
+    // RECEIVER: Process Link 1, create Link 2
+    processBtn.onclick = async () => {
+        const link1 = link1Input.value.trim();
+        if (!link1) {
+            addLog('❌ Paste Link 1 first', true);
+            return;
+        }
+        
+        const hash = link1.split('#')[1];
+        if (!hash) {
+            addLog('❌ Invalid link', true);
+            return;
+        }
+        
+        const data = decodeFromHash(hash);
+        if (!data || data.type !== 'offer') {
+            addLog('❌ Not a valid offer link', true);
+            return;
+        }
+        
+        roomCode = data.code;
+        myRole = 'receiver';
+        
+        // Create peer connection
+        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        
+        pc.ondatachannel = (e) => {
+            dc = e.channel;
+            setupChannelEvents(dc, 'receiver');
+        };
+        
+        pc.onicecandidate = async (e) => {
+            if (!e.candidate && pc.localDescription) {
+                // ICE complete - create Link 2 with answer
+                const answerData = {
+                    type: 'answer',
+                    code: roomCode,
+                    sdp: pc.localDescription.sdp
+                };
+                const answerHash = encodeToHash(answerData);
+                const link = `${window.location.origin}${window.location.pathname}#${answerHash}`;
+                link2Url.innerText = link;
+                link2Box.style.display = 'block';
+                addLog(`✅ Link 2 created! Send this back to sender.`);
+                updateReceiverStatus('Link 2 created, waiting for connection...', false, true);
+            }
+        };
+        
+        pc.onconnectionstatechange = () => {
+            addLog(`Connection: ${pc.connectionState}`);
+            if (pc.connectionState === 'connected') {
+                connected = true;
+                updateReceiverStatus('✅ Connected! Ready to receive', true);
+            } else if (pc.connectionState === 'failed') {
+                updateReceiverStatus('❌ Connection failed', false);
+            }
+        };
+        
+        await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        addLog('📡 Processing connection...');
+        updateReceiverStatus('Creating answer...', false, true);
+    };
+
+    copyLink2Btn.onclick = () => {
+        navigator.clipboard.writeText(link2Url.innerText);
+        addLog('✅ Link 2 copied!');
+        copyLink2Btn.innerText = '✓ Copied!';
+        setTimeout(() => copyLink2Btn.innerText = '📋 Copy Link 2', 2000);
+    };
+
+    function setupChannelEvents(channel, role) {
         channel.onopen = () => {
-            addLog('🔓 Data channel open');
+            addLog(`🔓 Data channel open (${role})`);
             connected = true;
-            updateStatus('✅ Connected! Ready to send files', 'connected');
-            sendFileBtn.disabled = false;
+            if (role === 'sender') {
+                updateSenderStatus('✅ Connected! Ready to send', true);
+                sendBtn.disabled = false;
+            } else {
+                updateReceiverStatus('✅ Connected! Ready to receive', true);
+            }
         };
+        
         channel.onclose = () => {
-            addLog('🔒 Data channel closed');
+            addLog(`🔒 Data channel closed`);
             connected = false;
-            updateStatus('Disconnected', 'waiting');
-            sendFileBtn.disabled = true;
+            if (role === 'sender') {
+                updateSenderStatus('Disconnected', false);
+                sendBtn.disabled = true;
+            } else {
+                updateReceiverStatus('Disconnected', false);
+            }
         };
-        channel.onmessage = async (e) => {
+        
+        channel.onmessage = (e) => {
             if (typeof e.data === 'string') {
                 try {
                     const msg = JSON.parse(e.data);
@@ -387,11 +578,8 @@
                         addLog(`✅ Saved: ${fileName}`);
                         receiveStatus.innerText = `✔️ Received: ${fileName}`;
                         const item = document.createElement('div');
-                        item.style.background = '#1f2a36';
-                        item.style.padding = '8px';
-                        item.style.borderRadius = '30px';
-                        item.style.marginBottom = '6px';
-                        item.innerText = `📎 ${fileName} (${(expectedSize/1024).toFixed(1)} KB)`;
+                        item.className = 'file-item';
+                        item.innerHTML = `📎 ${fileName} (${(expectedSize/1024).toFixed(1)} KB)`;
                         receivedFiles.prepend(item);
                         receiveProgress.style.width = '0%';
                         receivedBuffer = [];
@@ -405,131 +593,43 @@
             }
         };
     }
-    
-    // Listen for ICE candidates
-    async function listenForSignals() {
-        while (sessionId && !connected) {
-            const signal = await waitForSignal('ice', 1000);
-            if (signal && signal.candidate && pc) {
-                try {
-                    await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
-                    addLog('❄️ ICE candidate added');
-                } catch(e) {}
-            }
-            
-            // Also check for answer if we're initiator
-            if (myRole === 'initiator' && !pc?.remoteDescription) {
-                const answer = await waitForSignal('answer', 1000);
-                if (answer && answer.sdp) {
-                    await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: answer.sdp }));
-                    addLog('📥 Answer received');
-                }
-            }
-            
-            // Check for offer if we're joiner
-            if (myRole === 'joiner' && !pc?.remoteDescription) {
-                const offer = await waitForSignal('offer', 1000);
-                if (offer && offer.sdp) {
-                    await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: offer.sdp }));
-                    addLog('📥 Offer received, creating answer...');
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
-                }
-            }
-            
-            await new Promise(r => setTimeout(r, 100));
-        }
-    }
-    
-    // Create session (initiator)
-    createSessionBtn.onclick = async () => {
-        sessionId = Math.random().toString(36).substring(2, 15);
-        myRole = 'initiator';
-        
-        // Create link with session ID
-        const link = `${window.location.origin}${window.location.pathname}?session=${sessionId}`;
-        sessionLink.innerText = link;
-        sessionLinkBox.style.display = 'block';
-        
-        updateStatus('🔗 Share this link with your peer', 'waiting');
-        addLog(`Session created! Share this link: ${link}`);
-        
-        // Setup WebRTC
-        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-        setupDataChannel('initiator');
-        
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        
-        // Start listening for signals
-        listenForSignals();
-    };
-    
-    copyLinkBtn.onclick = () => {
-        navigator.clipboard.writeText(sessionLink.innerText);
-        addLog('✅ Link copied!');
-        copyLinkBtn.innerText = '✓ Copied!';
-        setTimeout(() => copyLinkBtn.innerText = '📋 Copy Link', 2000);
-    };
-    
-    // Auto-join if session in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const autoSession = urlParams.get('session');
-    if (autoSession) {
-        sessionId = autoSession;
-        myRole = 'joiner';
-        updateStatus('🔗 Joining session...', 'connecting');
-        addLog(`Auto-joining session: ${sessionId}`);
-        
-        // Setup WebRTC as joiner
-        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-        setupDataChannel('joiner');
-        
-        // Start listening for offer
-        listenForSignals();
-        
-        // Remove session from URL for cleanliness
-        window.history.replaceState({}, document.title, window.location.pathname);
-    } else {
-        updateStatus('Ready to create a session', 'waiting');
-    }
-    
-    // File handling
+
+    // File selection
     function selectFile(file) {
         if (!file) return;
         pendingFile = file;
-        fileInfo.style.display = 'block';
         fileInfo.innerHTML = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
-        addLog(`Selected: ${file.name}`);
-        sendFileBtn.disabled = !connected;
+        addLog(`📁 Selected: ${file.name}`);
+        sendBtn.disabled = !connected;
     }
-    
-    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropzone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => e.target.files[0] && selectFile(e.target.files[0]));
-    dropZone.addEventListener('dragover', (e) => e.preventDefault());
-    dropZone.addEventListener('drop', (e) => {
+    dropzone.addEventListener('dragover', (e) => e.preventDefault());
+    dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         e.dataTransfer.files[0] && selectFile(e.dataTransfer.files[0]);
     });
-    
-    sendFileBtn.onclick = async () => {
+
+    sendBtn.onclick = async () => {
         if (!connected || !dc || dc.readyState !== 'open') {
-            addLog('Not connected', true);
+            addLog('❌ Not connected', true);
             return;
         }
         if (!pendingFile) {
-            addLog('No file selected', true);
+            addLog('❌ No file selected', true);
             return;
         }
         if (sending) return;
         
         const file = pendingFile;
         sending = true;
-        sendFileBtn.disabled = true;
+        sendBtn.disabled = true;
         sentBytes = 0;
         sendStart = performance.now();
         
         dc.send(JSON.stringify({ type: 'fileMeta', name: file.name, size: file.size }));
+        addLog(`📤 Sending: ${file.name}`);
         
         const chunkSize = 16384;
         let offset = 0;
@@ -551,9 +651,9 @@
                     dc.send(JSON.stringify({ type: 'fileEnd' }));
                     addLog(`✅ Sent ${file.name} in ${elapsed.toFixed(2)}s`);
                     sending = false;
-                    sendFileBtn.disabled = !connected;
+                    sendBtn.disabled = !connected;
                     pendingFile = null;
-                    fileInfo.style.display = 'none';
+                    fileInfo.innerHTML = '';
                     sendProgress.style.width = '0%';
                     sendSpeed.innerText = '';
                 }
@@ -562,8 +662,22 @@
         };
         sendNext();
     };
-    
-    addLog('✨ One-Link WebRTC - Create a session and share the link!');
+
+    // Auto-detect if page loaded with a link
+    if (window.location.hash) {
+        const hash = window.location.hash.slice(1);
+        const data = decodeFromHash(hash);
+        if (data && data.type === 'offer') {
+            link1Input.value = window.location.href;
+            addLog('📎 Link detected! Click "Create Link 2" to continue');
+        } else if (data && data.type === 'answer') {
+            link2Input.value = window.location.href;
+            addLog('📎 Answer link detected! Click "Complete Connection"');
+        }
+    }
+
+    addLog('✨ Welcome! Sender: Create Link 1 → Share → Paste Link 2 → Send files');
+    addLog('📱 Receiver: Paste Link 1 → Create Link 2 → Share back → Receive files');
 </script>
 </body>
 </html>
