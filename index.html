@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>FileShare · Cross-Device WebRTC (Working)</title>
+    <title>FileShare · Cross-Device WebRTC (Debug Fixed)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -43,7 +43,7 @@
         }
         .card {
             flex: 1;
-            min-width: 350px;
+            min-width: 380px;
             background: rgba(15, 23, 42, 0.9);
             backdrop-filter: blur(10px);
             border-radius: 24px;
@@ -159,7 +159,7 @@
             border-radius: 20px;
             padding: 16px;
             margin-top: 24px;
-            max-height: 250px;
+            max-height: 300px;
             overflow-y: auto;
             font-family: monospace;
             font-size: 0.7rem;
@@ -168,6 +168,12 @@
             padding: 4px 0;
             border-bottom: 1px solid #1e293b;
             color: #94a3b8;
+        }
+        .log-entry.error {
+            color: #f87171;
+        }
+        .log-entry.success {
+            color: #22c55e;
         }
         hr {
             border-color: #334155;
@@ -185,12 +191,18 @@
             margin: 12px 0;
             border-radius: 8px;
         }
+        .sdp-preview {
+            font-size: 0.65rem;
+            color: #60a5fa;
+            margin-top: 4px;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>📡 Cross-Device WebRTC FileShare</h1>
-    <div class="sub">🔗 Works across ANY devices · Simply copy & paste SDP text</div>
+    <div class="sub">🔗 Copy the ENTIRE text block starting with "v=0"</div>
 
     <div class="grid">
         <!-- SENDER CARD -->
@@ -204,25 +216,26 @@
                 <span id="senderStatus">Disconnected</span>
             </div>
 
-            <button id="createOfferBtn" class="primary">📡 Step 1: Create Offer (Copy This)</button>
+            <button id="createOfferBtn" class="primary">📡 Step 1: Create Offer</button>
             
             <div id="offerBox" style="display: none;">
                 <div class="step-box">
                     <strong>✓ Step 1 Complete</strong><br>
-                    Copy the text below and send to your friend
+                    Copy the ENTIRE text below (it starts with "v=0")
                 </div>
-                <textarea id="offerSDP" rows="5" readonly></textarea>
-                <button id="copyOfferBtn" class="secondary">📋 Copy Offer Text</button>
+                <textarea id="offerSDP" rows="6" readonly></textarea>
+                <button id="copyOfferBtn" class="secondary">📋 Copy Full Offer</button>
+                <div class="sdp-preview" id="offerPreview"></div>
             </div>
 
             <div id="answerBox" style="display: none;">
                 <hr>
                 <div class="step-box">
                     <strong>⏳ Step 3: Paste Answer from Friend</strong><br>
-                    Once your friend sends back the answer, paste it here
+                    Paste the complete answer text they send you
                 </div>
-                <textarea id="answerSDP" rows="5" placeholder="Paste the answer SDP here..."></textarea>
-                <button id="submitAnswerBtn" class="primary">✅ Connect</button>
+                <textarea id="answerSDP" rows="6" placeholder="Paste the full answer SDP here (should start with v=0)..."></textarea>
+                <button id="submitAnswerBtn" class="primary">✅ Complete Connection</button>
             </div>
 
             <hr>
@@ -250,19 +263,20 @@
 
             <div class="step-box">
                 <strong>⏳ Step 2: Paste Friend's Offer</strong><br>
-                Paste the offer your friend sent you
+                Paste the ENTIRE offer text they sent you
             </div>
-            <textarea id="receivedOffer" rows="5" placeholder="Paste the offer SDP here..."></textarea>
-            <button id="createAnswerBtn" class="primary">🔄 Step 2: Create Answer (Copy This)</button>
+            <textarea id="receivedOffer" rows="6" placeholder="Paste the full offer SDP here (should start with v=0)..."></textarea>
+            <button id="createAnswerBtn" class="primary">🔄 Step 2: Create Answer</button>
 
             <div id="answerOutputBox" style="display: none;">
                 <hr>
                 <div class="step-box">
                     <strong>✓ Step 2 Complete</strong><br>
-                    Copy this answer text and send back to your friend
+                    Copy the ENTIRE answer text below and send back
                 </div>
-                <textarea id="answerOutput" rows="5" readonly></textarea>
-                <button id="copyAnswerBtn" class="secondary">📋 Copy Answer Text</button>
+                <textarea id="answerOutput" rows="6" readonly></textarea>
+                <button id="copyAnswerBtn" class="secondary">📋 Copy Full Answer</button>
+                <div class="sdp-preview" id="answerPreview"></div>
             </div>
 
             <hr>
@@ -300,6 +314,7 @@
     const offerBox = document.getElementById('offerBox');
     const offerSDP = document.getElementById('offerSDP');
     const copyOfferBtn = document.getElementById('copyOfferBtn');
+    const offerPreview = document.getElementById('offerPreview');
     const answerBox = document.getElementById('answerBox');
     const answerSDP = document.getElementById('answerSDP');
     const submitAnswerBtn = document.getElementById('submitAnswerBtn');
@@ -308,6 +323,7 @@
     const answerOutputBox = document.getElementById('answerOutputBox');
     const answerOutput = document.getElementById('answerOutput');
     const copyAnswerBtn = document.getElementById('copyAnswerBtn');
+    const answerPreview = document.getElementById('answerPreview');
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
     const fileInfo = document.getElementById('fileInfo');
@@ -319,10 +335,11 @@
     const receiveStatus = document.getElementById('receiveStatus');
     const logDiv = document.getElementById('log');
 
-    function addLog(msg, isErr = false) {
+    function addLog(msg, type = 'info') {
         const entry = document.createElement('div');
         entry.className = 'log-entry';
-        entry.style.color = isErr ? '#f87171' : '#94a3b8';
+        if (type === 'error') entry.classList.add('error');
+        if (type === 'success') entry.classList.add('success');
         entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
         logDiv.appendChild(entry);
         logDiv.scrollTop = logDiv.scrollHeight;
@@ -332,7 +349,6 @@
     function updateSenderUI(connectedFlag, connecting = false, message = null) {
         if (message) {
             senderStatus.innerText = message;
-            senderDot.className = message.includes('Connected') ? 'dot green' : (message.includes('Connecting') ? 'dot yellow' : 'dot red');
         } else if (connectedFlag) {
             senderStatus.innerText = '✅ Connected';
             senderDot.className = 'dot green';
@@ -351,7 +367,6 @@
     function updateReceiverUI(connectedFlag, connecting = false, message = null) {
         if (message) {
             receiverStatus.innerText = message;
-            receiverDot.className = message.includes('Connected') ? 'dot green' : (message.includes('Connecting') ? 'dot yellow' : 'dot red');
         } else if (connectedFlag) {
             receiverStatus.innerText = '✅ Connected';
             receiverDot.className = 'dot green';
@@ -376,16 +391,23 @@
         connected = false;
     }
 
+    function validateSDP(sdp) {
+        if (!sdp || typeof sdp !== 'string') return false;
+        if (!sdp.trim().startsWith('v=0')) return false;
+        if (!sdp.includes('m=')) return false;
+        return true;
+    }
+
     function setupDataChannelEvents(channel, role) {
         channel.onopen = () => {
-            addLog(`🔓 Data channel open (${role})`);
+            addLog(`🔓 Data channel open (${role})`, 'success');
             connected = true;
             if (role === 'sender') {
                 updateSenderUI(true);
-                addLog('🎉 Connection established! You can now send files.');
+                addLog('🎉 Connection established! You can now send files.', 'success');
             } else {
                 updateReceiverUI(true);
-                addLog('🎉 Connection established! Ready to receive files.');
+                addLog('🎉 Connection established! Ready to receive files.', 'success');
             }
         };
         
@@ -399,7 +421,7 @@
             }
         };
         
-        channel.onerror = (err) => addLog(`Channel error: ${err}`, true);
+        channel.onerror = (err) => addLog(`Channel error: ${err}`, 'error');
         
         channel.onmessage = (e) => {
             if (typeof e.data === 'string') {
@@ -425,7 +447,7 @@
                         setTimeout(() => URL.revokeObjectURL(url), 100);
                         const duration = (performance.now() - receiveStart) / 1000;
                         const speed = (expectedSize / 1024 / 1024 / duration).toFixed(2);
-                        addLog(`✅ Saved: ${fileName} (${duration.toFixed(2)}s, ${speed} MB/s)`);
+                        addLog(`✅ Saved: ${fileName} (${duration.toFixed(2)}s, ${speed} MB/s)`, 'success');
                         receiveStatus.innerText = `✔️ Received: ${fileName}`;
                         const item = document.createElement('div');
                         item.className = 'file-item';
@@ -435,7 +457,7 @@
                         receivedBuffer = [];
                     }
                 } catch(err) {
-                    addLog(`Parse error: ${err.message}`, true);
+                    addLog(`Parse error: ${err.message}`, 'error');
                 }
             } else if (e.data instanceof ArrayBuffer) {
                 receivedBuffer.push(e.data);
@@ -454,30 +476,35 @@
         addLog('📡 Creating WebRTC connection as SENDER...');
         updateSenderUI(false, true, 'Creating offer...');
         
-        pc = new RTCPeerConnection({ 
+        const config = { 
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' }
             ] 
-        });
+        };
         
-        // Create data channel (MUST be created before setting local description)
+        pc = new RTCPeerConnection(config);
+        
+        // Create data channel
         dc = pc.createDataChannel('fileChannel', { ordered: true });
         setupDataChannelEvents(dc, 'sender');
         addLog('✅ Data channel created');
         
+        let candidateCount = 0;
         pc.onicecandidate = (event) => {
             if (event.candidate) {
-                addLog(`❄️ ICE candidate: ${event.candidate.candidate.substring(0, 50)}...`);
+                candidateCount++;
+                addLog(`❄️ ICE candidate ${candidateCount} gathered`);
             } else {
-                addLog('✅ ICE gathering COMPLETE! Ready to copy offer.');
+                addLog(`✅ ICE gathering COMPLETE! Total ${candidateCount} candidates.`, 'success');
                 // Show the complete offer SDP
                 const fullSDP = pc.localDescription.sdp;
                 offerSDP.value = fullSDP;
+                offerPreview.innerHTML = `First line: ${fullSDP.substring(0, 50)}...`;
                 offerBox.style.display = 'block';
                 answerBox.style.display = 'block';
-                updateSenderUI(false, false, 'Offer ready - copy and send to friend');
-                addLog('📋 Offer SDP is ready. Copy it and send to your friend!');
+                updateSenderUI(false, false, 'Offer ready - copy and send');
+                addLog('📋 Offer SDP is ready. Copy the ENTIRE text starting with "v=0"', 'success');
             }
         };
         
@@ -488,7 +515,7 @@
                 updateSenderUI(true);
             } else if (pc.connectionState === 'failed') {
                 updateSenderUI(false);
-                addLog('❌ Connection failed. Make sure you pasted the correct answer.', true);
+                addLog('❌ Connection failed', 'error');
             }
         };
         
@@ -496,39 +523,48 @@
             addLog(`Signaling state: ${pc.signalingState}`);
         };
         
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        addLog('📡 Offer created, gathering ICE candidates...');
+        try {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            addLog('📡 Offer created, gathering ICE candidates...');
+        } catch (err) {
+            addLog(`Error creating offer: ${err.message}`, 'error');
+        }
     };
     
     copyOfferBtn.onclick = () => {
         offerSDP.select();
         navigator.clipboard.writeText(offerSDP.value);
-        addLog('✅ Offer copied! Send this text to your friend.');
+        addLog('✅ Offer copied! Send the ENTIRE text to your friend.', 'success');
         copyOfferBtn.innerText = '✓ Copied!';
-        setTimeout(() => copyOfferBtn.innerText = '📋 Copy Offer Text', 2000);
+        setTimeout(() => copyOfferBtn.innerText = '📋 Copy Full Offer', 2000);
     };
     
     // SENDER: Submit Answer
     submitAnswerBtn.onclick = async () => {
         const answer = answerSDP.value.trim();
         if (!answer) {
-            addLog('❌ Please paste the answer SDP', true);
+            addLog('❌ Please paste the answer SDP', 'error');
+            return;
+        }
+        
+        if (!validateSDP(answer)) {
+            addLog('❌ Invalid SDP: Should start with "v=0" and contain "m="', 'error');
             return;
         }
         
         if (!pc) {
-            addLog('❌ No connection. Please create an offer first.', true);
+            addLog('❌ No connection. Please create an offer first.', 'error');
             return;
         }
         
         try {
             addLog('📥 Setting remote answer...');
             await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: answer }));
-            addLog('✅ Remote answer set! Establishing connection...');
+            addLog('✅ Remote answer set! Establishing connection...', 'success');
             updateSenderUI(false, true, 'Connecting...');
         } catch (err) {
-            addLog(`❌ Error setting answer: ${err.message}`, true);
+            addLog(`❌ Error setting answer: ${err.message}`, 'error');
         }
     };
     
@@ -536,41 +572,53 @@
     createAnswerBtn.onclick = async () => {
         const offer = receivedOffer.value.trim();
         if (!offer) {
-            addLog('❌ Please paste the offer SDP from your friend', true);
+            addLog('❌ Please paste the offer SDP from your friend', 'error');
             return;
         }
         
+        if (!validateSDP(offer)) {
+            addLog('❌ Invalid offer SDP: Should start with "v=0" and contain "m="', 'error');
+            addLog(`First 50 chars: ${offer.substring(0, 50)}`, 'error');
+            return;
+        }
+        
+        addLog(`✅ Offer validated (${offer.length} characters)`, 'success');
         closeConnection();
         isSender = false;
         
         addLog('📡 Creating WebRTC connection as RECEIVER...');
         updateReceiverUI(false, true, 'Processing offer...');
         
-        pc = new RTCPeerConnection({ 
+        const config = { 
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' }
             ] 
-        });
+        };
         
-        // Listen for data channel (receiver doesn't create it)
+        pc = new RTCPeerConnection(config);
+        
+        // Listen for data channel
         pc.ondatachannel = (event) => {
-            addLog('📡 Data channel received from sender!');
+            addLog('📡 Data channel received from sender!', 'success');
             dc = event.channel;
             setupDataChannelEvents(dc, 'receiver');
         };
         
+        let candidateCount = 0;
         pc.onicecandidate = (event) => {
             if (event.candidate) {
-                addLog(`❄️ ICE candidate: ${event.candidate.candidate.substring(0, 50)}...`);
+                candidateCount++;
+                addLog(`❄️ ICE candidate ${candidateCount} gathered`);
             } else {
-                addLog('✅ ICE gathering COMPLETE! Answer is ready.');
+                addLog(`✅ ICE gathering COMPLETE! Total ${candidateCount} candidates.`, 'success');
                 // Show the complete answer SDP
                 const fullSDP = pc.localDescription.sdp;
                 answerOutput.value = fullSDP;
+                answerPreview.innerHTML = `First line: ${fullSDP.substring(0, 50)}...`;
                 answerOutputBox.style.display = 'block';
-                updateReceiverUI(false, false, 'Answer ready - copy and send to friend');
-                addLog('📋 Answer SDP is ready. Copy it and send back to your friend!');
+                updateReceiverUI(false, false, 'Answer ready - copy and send');
+                addLog('📋 Answer SDP is ready. Copy the ENTIRE text and send back!', 'success');
             }
         };
         
@@ -581,7 +629,7 @@
                 updateReceiverUI(true);
             } else if (pc.connectionState === 'failed') {
                 updateReceiverUI(false);
-                addLog('❌ Connection failed. Make sure the offer is valid.', true);
+                addLog('❌ Connection failed', 'error');
             }
         };
         
@@ -590,24 +638,26 @@
         };
         
         try {
+            addLog('📥 Setting remote offer...');
             await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: offer }));
-            addLog('✅ Remote offer set, creating answer...');
+            addLog('✅ Remote offer set, creating answer...', 'success');
             
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             addLog('📡 Answer created, gathering ICE candidates...');
         } catch (err) {
-            addLog(`❌ Error creating answer: ${err.message}`, true);
-            updateReceiverUI(false, false, 'Error - invalid offer?');
+            addLog(`❌ Error creating answer: ${err.message}`, 'error');
+            addLog('Make sure the offer SDP is complete and not truncated', 'error');
+            updateReceiverUI(false, false, 'Error - invalid offer');
         }
     };
     
     copyAnswerBtn.onclick = () => {
         answerOutput.select();
         navigator.clipboard.writeText(answerOutput.value);
-        addLog('✅ Answer copied! Send this text back to your friend.');
+        addLog('✅ Answer copied! Send the ENTIRE text back to your friend.', 'success');
         copyAnswerBtn.innerText = '✓ Copied!';
-        setTimeout(() => copyAnswerBtn.innerText = '📋 Copy Answer Text', 2000);
+        setTimeout(() => copyAnswerBtn.innerText = '📋 Copy Full Answer', 2000);
     };
     
     // File selection
@@ -634,15 +684,15 @@
     
     sendBtn.onclick = async () => {
         if (!connected || !dc || dc.readyState !== 'open') {
-            addLog('❌ Not connected yet. Wait for connection to establish.', true);
+            addLog('❌ Not connected yet. Wait for connection to establish.', 'error');
             return;
         }
         if (!pendingFile) {
-            addLog('❌ No file selected. Drag and drop a file first.', true);
+            addLog('❌ No file selected. Drag and drop a file first.', 'error');
             return;
         }
         if (sending) {
-            addLog('❌ Already sending a file. Wait for it to finish.', true);
+            addLog('❌ Already sending a file.', 'error');
             return;
         }
         
@@ -677,7 +727,7 @@
                         dc.send(JSON.stringify({ type: 'fileEnd' }));
                         const elapsedTotal = (performance.now() - sendStart) / 1000;
                         const avgSpeed = (file.size / 1024 / 1024 / elapsedTotal).toFixed(2);
-                        addLog(`✅ Sent ${file.name} in ${elapsedTotal.toFixed(2)}s (${avgSpeed} MB/s)`);
+                        addLog(`✅ Sent ${file.name} in ${elapsedTotal.toFixed(2)}s (${avgSpeed} MB/s)`, 'success');
                         sending = false;
                         sendBtn.disabled = false;
                         pendingFile = null;
@@ -686,12 +736,12 @@
                         sendSpeed.innerText = '';
                     }
                 } catch (err) {
-                    addLog(`❌ Send error: ${err.message}`, true);
+                    addLog(`❌ Send error: ${err.message}`, 'error');
                     sending = false;
                 }
             };
             reader.onerror = (err) => {
-                addLog(`❌ File read error: ${err}`, true);
+                addLog(`❌ File read error: ${err}`, 'error');
                 sending = false;
             };
             reader.readAsArrayBuffer(slice);
@@ -699,12 +749,13 @@
         sendNext();
     };
     
-    addLog('✨ WebRTC FileShare Ready!');
-    addLog('📱 SENDER: Click "Create Offer" → Wait for "ICE gathering COMPLETE" → Copy → Send to friend');
-    addLog('📱 RECEIVER: Paste Offer → Click "Create Answer" → Wait for "ICE gathering COMPLETE" → Copy → Send back');
-    addLog('📱 SENDER: Paste Answer → Click "Connect" → Wait for "Connected" → Send file');
+    addLog('✨ WebRTC FileShare Ready!', 'success');
+    addLog('📱 IMPORTANT: When copying SDP, make sure you get the ENTIRE text starting with "v=0"');
+    addLog('📱 SENDER: Click "Create Offer" → Wait for "ICE gathering COMPLETE" → Copy ALL text');
+    addLog('📱 RECEIVER: Paste ALL text → Click "Create Answer" → Wait → Copy ALL answer text');
+    addLog('📱 SENDER: Paste ALL answer text → Click "Complete Connection"');
     addLog('');
-    addLog('⚠️ IMPORTANT: Always wait for "ICE gathering COMPLETE" before copying!');
+    addLog('⚠️ If you get "Invalid SDP line", the text was truncated. Copy the ENTIRE block!');
 </script>
 </body>
 </html>
