@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>FileShare · Cross-Device WebRTC</title>
+    <title>FileShare · Cross-Device WebRTC (Fixed)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -89,7 +89,7 @@
         button {
             background: #1e293b;
             border: none;
-            padding: 10px 16px;
+            padding: 12px 20px;
             border-radius: 40px;
             color: white;
             font-weight: 500;
@@ -106,10 +106,8 @@
         button.success {
             background: #22c55e;
         }
-        button.copy-btn {
+        button.secondary {
             background: #475569;
-            font-size: 0.75rem;
-            padding: 6px 12px;
         }
         textarea {
             width: 100%;
@@ -161,7 +159,7 @@
             border-radius: 20px;
             padding: 16px;
             margin-top: 24px;
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
             font-family: monospace;
             font-size: 0.7rem;
@@ -180,18 +178,33 @@
             color: #64748b;
             margin-top: 4px;
         }
-        .flex-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #3b82f6;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-left: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .step-indicator {
+            font-size: 0.7rem;
+            background: #1e293b;
+            padding: 4px 8px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-bottom: 8px;
         }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>📡 Cross-Device WebRTC FileShare</h1>
-    <div class="sub">🔗 Works across ANY devices · No server required · Copy & paste SDP</div>
+    <div class="sub">🔗 Works across ANY devices · Copy & paste SDP</div>
 
     <div class="grid">
         <!-- SENDER CARD -->
@@ -205,18 +218,20 @@
                 <span id="senderStatus">Disconnected</span>
             </div>
 
-            <button id="createOfferBtn" class="primary">📡 1. Create Offer (Copy This)</button>
+            <button id="createOfferBtn" class="primary">📡 Step 1: Create Offer</button>
             
             <div id="offerBox" style="display: none;">
+                <div class="step-indicator">✓ Step 1 Complete</div>
                 <label><strong>📋 Copy this Offer SDP:</strong></label>
                 <textarea id="offerSDP" rows="4" readonly></textarea>
-                <button id="copyOfferBtn" class="copy-btn">📋 Copy Offer</button>
+                <button id="copyOfferBtn" class="secondary">📋 Copy Offer</button>
                 <div class="help-text">Send this to your friend (WhatsApp, email, etc.)</div>
             </div>
 
             <div id="answerBox" style="display: none;">
                 <hr>
-                <label><strong>🔗 3. Paste Answer from Friend:</strong></label>
+                <div class="step-indicator">⏳ Step 3: Waiting for Answer</div>
+                <label><strong>🔗 Paste Answer from Friend:</strong></label>
                 <textarea id="answerSDP" rows="4" placeholder="Paste the answer SDP here..."></textarea>
                 <button id="submitAnswerBtn" class="primary">✅ Complete Connection</button>
             </div>
@@ -244,14 +259,16 @@
                 <span id="receiverStatus">Disconnected</span>
             </div>
 
-            <label><strong>🔗 2. Paste Offer from Friend:</strong></label>
+            <div class="step-indicator">⏳ Step 2: Waiting for Offer</div>
+            <label><strong>Paste Offer from Friend:</strong></label>
             <textarea id="receivedOffer" rows="4" placeholder="Paste the offer SDP here..."></textarea>
-            <button id="createAnswerBtn" class="primary">🔄 Create Answer (Copy This)</button>
+            <button id="createAnswerBtn" class="primary">🔄 Step 2: Create Answer</button>
 
             <div id="answerOutputBox" style="display: none;">
+                <div class="step-indicator">✓ Step 2 Complete</div>
                 <label><strong>📋 Copy this Answer SDP:</strong></label>
                 <textarea id="answerOutput" rows="4" readonly></textarea>
-                <button id="copyAnswerBtn" class="copy-btn">📋 Copy Answer</button>
+                <button id="copyAnswerBtn" class="secondary">📋 Copy Answer</button>
                 <div class="help-text">Send this back to your friend</div>
             </div>
 
@@ -280,6 +297,7 @@
     let receiveStart = 0;
     let sendStart = 0;
     let sentBytes = 0;
+    let iceGatheringComplete = false;
 
     // DOM elements
     const senderDot = document.getElementById('senderDot');
@@ -319,8 +337,10 @@
         console.log(msg);
     }
 
-    function updateSenderUI(connectedFlag, connecting = false) {
-        if (connectedFlag) {
+    function updateSenderUI(connectedFlag, connecting = false, message = null) {
+        if (message) {
+            senderStatus.innerText = message;
+        } else if (connectedFlag) {
             senderStatus.innerText = '✅ Connected';
             senderDot.className = 'dot green';
             sendBtn.disabled = false;
@@ -335,8 +355,10 @@
         }
     }
 
-    function updateReceiverUI(connectedFlag, connecting = false) {
-        if (connectedFlag) {
+    function updateReceiverUI(connectedFlag, connecting = false, message = null) {
+        if (message) {
+            receiverStatus.innerText = message;
+        } else if (connectedFlag) {
             receiverStatus.innerText = '✅ Connected';
             receiverDot.className = 'dot green';
         } else if (connecting) {
@@ -358,6 +380,7 @@
             pc = null;
         }
         connected = false;
+        iceGatheringComplete = false;
     }
 
     function setupDataChannelEvents(channel, role) {
@@ -404,7 +427,8 @@
                         a.click();
                         URL.revokeObjectURL(url);
                         const duration = (performance.now() - receiveStart) / 1000;
-                        addLog(`✅ Saved: ${fileName} (${duration.toFixed(2)}s)`);
+                        const speed = (expectedSize / 1024 / 1024 / duration).toFixed(2);
+                        addLog(`✅ Saved: ${fileName} (${duration.toFixed(2)}s, ${speed} MB/s)`);
                         receiveStatus.innerText = `✔️ Received: ${fileName}`;
                         const item = document.createElement('div');
                         item.className = 'file-item';
@@ -427,6 +451,7 @@
     createOfferBtn.onclick = async () => {
         closeConnection();
         isSender = true;
+        iceGatheringComplete = false;
         
         pc = new RTCPeerConnection({ 
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] 
@@ -441,14 +466,24 @@
             setupDataChannelEvents(dc, 'sender');
         };
         
+        // Track ICE candidates
+        let iceCandidates = [];
         pc.onicecandidate = (e) => {
-            if (!e.candidate && pc.localDescription) {
-                // ICE complete - show the offer
-                offerSDP.value = pc.localDescription.sdp;
+            if (e.candidate) {
+                iceCandidates.push(e.candidate);
+                addLog(`❄️ ICE candidate gathered`);
+            } else {
+                // ICE gathering complete - now we have the full SDP
+                addLog(`✅ ICE gathering complete (${iceCandidates.length} candidates)`);
+                iceGatheringComplete = true;
+                
+                // The local description now includes all ICE candidates
+                const fullSDP = pc.localDescription.sdp;
+                offerSDP.value = fullSDP;
                 offerBox.style.display = 'block';
                 answerBox.style.display = 'block';
-                addLog('✅ Offer created! Copy and send to your friend.');
-                updateSenderUI(false, true);
+                addLog('📤 Offer created! Copy and send to your friend.');
+                updateSenderUI(false, true, 'Waiting for answer...');
             }
         };
         
@@ -457,14 +492,17 @@
             if (pc.connectionState === 'connected') {
                 connected = true;
                 updateSenderUI(true);
+                addLog('🎉 Connection established!');
             } else if (pc.connectionState === 'failed') {
                 updateSenderUI(false);
+                addLog('❌ Connection failed', true);
             }
         };
         
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        addLog('📡 Creating offer...');
+        addLog('📡 Creating offer, gathering ICE candidates...');
+        updateSenderUI(false, true, 'Creating offer...');
     };
     
     copyOfferBtn.onclick = () => {
@@ -486,7 +524,7 @@
         try {
             await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: answer }));
             addLog('✅ Answer received, connecting...');
-            updateSenderUI(false, true);
+            updateSenderUI(false, true, 'Connecting...');
         } catch (err) {
             addLog(`❌ Error: ${err.message}`, true);
         }
@@ -502,6 +540,7 @@
         
         closeConnection();
         isSender = false;
+        iceGatheringComplete = false;
         
         pc = new RTCPeerConnection({ 
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] 
@@ -512,12 +551,23 @@
             setupDataChannelEvents(dc, 'receiver');
         };
         
+        // Track ICE candidates
+        let iceCandidates = [];
         pc.onicecandidate = (e) => {
-            if (!e.candidate && pc.localDescription) {
-                answerOutput.value = pc.localDescription.sdp;
+            if (e.candidate) {
+                iceCandidates.push(e.candidate);
+                addLog(`❄️ ICE candidate gathered`);
+            } else {
+                // ICE gathering complete - now we have the full answer SDP
+                addLog(`✅ ICE gathering complete (${iceCandidates.length} candidates)`);
+                iceGatheringComplete = true;
+                
+                // The local description now includes all ICE candidates
+                const fullSDP = pc.localDescription.sdp;
+                answerOutput.value = fullSDP;
                 answerOutputBox.style.display = 'block';
-                addLog('✅ Answer created! Copy and send back to your friend.');
-                updateReceiverUI(false, true);
+                addLog('📤 Answer created! Copy and send back to your friend.');
+                updateReceiverUI(false, true, 'Answer ready, waiting for connection...');
             }
         };
         
@@ -526,15 +576,25 @@
             if (pc.connectionState === 'connected') {
                 connected = true;
                 updateReceiverUI(true);
+                addLog('🎉 Connection established!');
             } else if (pc.connectionState === 'failed') {
                 updateReceiverUI(false);
+                addLog('❌ Connection failed', true);
             }
         };
         
-        await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: offer }));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        addLog('📡 Creating answer...');
+        try {
+            await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: offer }));
+            addLog('📡 Offer set, creating answer...');
+            updateReceiverUI(false, true, 'Creating answer...');
+            
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            addLog('Answer created, gathering ICE candidates...');
+        } catch (err) {
+            addLog(`❌ Error: ${err.message}`, true);
+            updateReceiverUI(false, false, 'Error - invalid offer?');
+        }
     };
     
     copyAnswerBtn.onclick = () => {
@@ -589,26 +649,37 @@
             const slice = file.slice(offset, offset + chunkSize);
             const reader = new FileReader();
             reader.onload = (e) => {
-                dc.send(e.target.result);
-                sentBytes += e.target.result.byteLength;
-                const percent = (sentBytes / file.size) * 100;
-                sendProgress.style.width = `${percent}%`;
-                const elapsed = (performance.now() - sendStart) / 1000;
-                const speed = (sentBytes / 1024 / 1024 / elapsed).toFixed(2);
-                sendSpeed.innerText = `${(sentBytes/1024).toFixed(0)}/${(file.size/1024).toFixed(0)} KB · ${speed} MB/s`;
-                offset += e.target.result.byteLength;
-                if (offset < file.size) {
-                    sendNext();
-                } else {
-                    dc.send(JSON.stringify({ type: 'fileEnd' }));
-                    addLog(`✅ Sent ${file.name} in ${elapsed.toFixed(2)}s`);
+                try {
+                    dc.send(e.target.result);
+                    sentBytes += e.target.result.byteLength;
+                    const percent = (sentBytes / file.size) * 100;
+                    sendProgress.style.width = `${percent}%`;
+                    const elapsed = (performance.now() - sendStart) / 1000;
+                    const speed = (sentBytes / 1024 / 1024 / elapsed).toFixed(2);
+                    sendSpeed.innerText = `${(sentBytes/1024).toFixed(0)}/${(file.size/1024).toFixed(0)} KB · ${speed} MB/s`;
+                    offset += e.target.result.byteLength;
+                    if (offset < file.size) {
+                        sendNext();
+                    } else {
+                        dc.send(JSON.stringify({ type: 'fileEnd' }));
+                        const elapsedTotal = (performance.now() - sendStart) / 1000;
+                        const avgSpeed = (file.size / 1024 / 1024 / elapsedTotal).toFixed(2);
+                        addLog(`✅ Sent ${file.name} in ${elapsedTotal.toFixed(2)}s (${avgSpeed} MB/s)`);
+                        sending = false;
+                        sendBtn.disabled = false;
+                        pendingFile = null;
+                        fileInfo.innerHTML = '';
+                        sendProgress.style.width = '0%';
+                        sendSpeed.innerText = '';
+                    }
+                } catch (err) {
+                    addLog(`❌ Send error: ${err.message}`, true);
                     sending = false;
-                    sendBtn.disabled = false;
-                    pendingFile = null;
-                    fileInfo.innerHTML = '';
-                    sendProgress.style.width = '0%';
-                    sendSpeed.innerText = '';
                 }
+            };
+            reader.onerror = (err) => {
+                addLog(`❌ File read error: ${err}`, true);
+                sending = false;
             };
             reader.readAsArrayBuffer(slice);
         };
@@ -616,9 +687,11 @@
     };
     
     addLog('✨ Ready! This works across ANY devices/browsers/locations');
-    addLog('📱 Sender: Create Offer → Copy → Send to friend (WhatsApp/Email)');
-    addLog('📱 Receiver: Paste Offer → Create Answer → Copy → Send back');
+    addLog('📱 Sender: Click "Create Offer" → Wait for ICE gathering → Copy → Send to friend');
+    addLog('📱 Receiver: Paste Offer → Wait for ICE gathering → Copy Answer → Send back');
     addLog('📱 Sender: Paste Answer → Connected! → Send file');
+    addLog('');
+    addLog('⚠️ IMPORTANT: Wait for "ICE gathering complete" message before copying!');
 </script>
 </body>
 </html>
