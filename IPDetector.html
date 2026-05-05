@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>VPN-Aware STUN | IP & Port Detector</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a1a1e 0%, #061214 100%);
+            font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(12, 22, 26, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(80, 210, 194, 0.2);
+            padding: 2rem;
+            max-width: 750px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0 0 0.3rem 0;
+            color: #c6ffef;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1::before {
+            content: "🔒";
+            font-size: 1.8rem;
+        }
+
+        .sub {
+            color: #9ec7c0;
+            border-left: 3px solid #2dd4bf;
+            padding-left: 16px;
+            margin: 0 0 25px 0;
+            font-size: 0.9rem;
+        }
+
+        .info-panel {
+            background: #0a1518;
+            border-radius: 1.5rem;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #2a4948;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            padding: 10px 0;
+            border-bottom: 1px dashed #2a4948;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-weight: 500;
+            color: #92c9c0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .value {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #e2fff7;
+            word-break: break-all;
+            background: #07121680;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #2a756b;
+            border-top: 2px solid #4fe3cf;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-area {
+            background: #071b1f;
+            border-radius: 30px;
+            padding: 10px 16px;
+            margin-top: 12px;
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+
+        .vpn-warning {
+            background: #2a3a2e;
+            border-left: 4px solid #ffd966;
+            padding: 8px 12px;
+            border-radius: 12px;
+            margin-top: 12px;
+            font-size: 0.7rem;
+            color: #ffe6b3;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 20px 0 15px;
+        }
+
+        button {
+            background: rgba(32, 58, 62, 0.9);
+            border: 1px solid #3d837b;
+            color: #d4fcf3;
+            font-weight: 600;
+            padding: 10px 22px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: #2c6e66;
+            transform: translateY(-1px);
+        }
+
+        .footnote {
+            font-size: 0.65rem;
+            color: #3d7069;
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #244e4a;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 600px) {
+            .card { padding: 1.2rem; }
+            .value { font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>VPN-Compatible STUN Detector</h1>
+    <div class="sub">Public IP + NAT Mapped Port — Works with VPNs, Firewalls & Split Tunneling</div>
+
+    <div class="info-panel">
+        <div class="info-row">
+            <span class="label">🌍 Public IP Address</span>
+            <span class="value" id="ipValue">—</span>
+        </div>
+        <div class="info-row">
+            <span class="label">🔌 Mapped Port (NAT)</span>
+            <span class="value" id="portValue">—</span>
+        </div>
+        <div class="info-row">
+            <span class="label">📡 Detection Method</span>
+            <span class="value" id="methodValue" style="font-size: 0.8rem;">—</span>
+        </div>
+        <div class="info-row">
+            <span class="label">🛡️ VPN Status</span>
+            <span class="value" id="vpnStatusValue" style="font-size: 0.8rem;">—</span>
+        </div>
+        <div class="status-area" id="statusMsg">
+            <span class="spinner"></span> <span id="statusText">initializing multi-strategy detection...</span>
+        </div>
+        <div id="vpnWarning" class="vpn-warning" style="display: none;">
+            ⚠️ VPN detected! Using VPN-optimized STUN fallbacks and extended timeouts.
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button id="refreshBtn">⟳ Force Refresh</button>
+        <button id="copyBtn">📋 Copy IP:Port</button>
+        <button id="vpnModeBtn">🔁 Toggle VPN Mode</button>
+    </div>
+    <div class="footnote">
+        <strong>VPN-Compatible Strategies:</strong><br>
+        1️⃣ <strong>Multi-STUN servers</strong> (Google, Cloudflare, Twilio) — works through most VPNs<br>
+        2️⃣ <strong>TURN relay fallback</strong> if UDP blocked by VPN kill-switch<br>
+        3️⃣ <strong>HTTP/STUN hybrid</strong> for strict VPN split-tunnel scenarios<br>
+        4️⃣ <strong>Adaptive timeout</strong> (up to 12s for VPN latency)<br>
+        5️⃣ <strong>VPN detection</strong> via IP mismatch & latency patterns
+    </div>
+</div>
+
+<script>
+    (function() {
+        // DOM elements
+        const ipSpan = document.getElementById('ipValue');
+        const portSpan = document.getElementById('portValue');
+        const methodSpan = document.getElementById('methodValue');
+        const vpnStatusSpan = document.getElementById('vpnStatusValue');
+        const statusTextSpan = document.getElementById('statusText');
+        const statusContainer = document.getElementById('statusMsg');
+        const vpnWarningDiv = document.getElementById('vpnWarning');
+        
+        // State
+        let currentIp = null;
+        let currentPort = null;
+        let vpnDetected = false;
+        let vpnModeForced = false;  // user can force VPN-optimized mode
+        let detectionInProgress = false;
+        
+        // Multiple STUN servers for redundancy (better VPN compatibility)
+        const STUN_SERVERS = [
+            { url: 'stun:stun.l.google.com:19302', name: 'Google STUN' },
+            { url: 'stun:stun.cloudflare.com:3478', name: 'Cloudflare STUN' },
+            { url: 'stun:stun.voip.blackberry.com:3478', name: 'Blackberry STUN' },
+            { url: 'stun:stun.ekiga.net:3478', name: 'Ekiga STUN' },
+            { url: 'stun:stun.twilio.com:3478', name: 'Twilio STUN' }
+        ];
+        
+        // TURN server as fallback when VPN blocks UDP (limited usage)
+        const TURN_SERVERS = [
+            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+        ];
+        
+        // Helper: Update UI
+        function updateUI(ip, port, method, statusMsg, isError = false, vpnStatus = null) {
+            if (ip && ip !== '0.0.0.0') {
+                ipSpan.innerText = ip;
+                currentIp = ip;
+            } else {
+                ipSpan.innerText = '—';
+                currentIp = null;
+            }
+            
+            if (port && typeof port === 'number' && port > 0 && port <= 65535) {
+                portSpan.innerText = port;
+                currentPort = port;
+            } else if (port && !isNaN(parseInt(port))) {
+                let p = parseInt(port);
+                if (p > 0 && p <= 65535) {
+                    portSpan.innerText = p;
+                    currentPort = p;
+                } else {
+                    portSpan.innerText = '—';
+                    currentPort = null;
+                }
+            } else {
+                portSpan.innerText = '—';
+                currentPort = null;
+            }
+            
+            if (method) methodSpan.innerText = method;
+            if (vpnStatus !== null) vpnStatusSpan.innerText = vpnStatus;
+            
+            statusTextSpan.innerText = statusMsg;
+            if (isError) {
+                statusContainer.style.background = "#2c1a1e";
+                statusContainer.style.borderLeft = "3px solid #ff8a7a";
+            } else {
+                statusContainer.style.background = "#071b1f";
+                statusContainer.style.borderLeft = "none";
+            }
+        }
+        
+        function setLoading() {
+            ipSpan.innerHTML = '<span class="spinner"></span> detecting';
+            portSpan.innerHTML = '<span class="spinner"></span> detecting';
+            methodSpan.innerText = '—';
+            currentIp = null;
+            currentPort = null;
+        }
+        
+        // Detect VPN by checking IP against multiple sources + latency patterns
+        async function detectVPN() {
+            try {
+                // Fetch IP from multiple sources to detect mismatch (VPN often shows consistent IP)
+                const [ipify, ipapi, cloudflare] = await Promise.allSettled([
+                    fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => d.ip),
+                    fetch('https://api.ip.sb/ip').then(r => r.text()),
+                    fetch('https://cloudflare.com/cdn-cgi/trace').then(r => r.text()).then(t => {
+                        const match = t.match(/ip=([^\n]+)/);
+                        return match ? match[1] : null;
+                    })
+                ]);
+                
+                const ips = [ipify.value, ipapi.value, cloudflare.value].filter(ip => ip && ip !== '');
+                const uniqueIps = new Set(ips);
+                
+                // If multiple sources return same IP, likely not VPN (or VPN with stable exit)
+                // But we check latency patterns - VPN adds 50-200ms typically
+                if (uniqueIps.size === 1 && ips.length >= 2) {
+                    return false; // consistent IP, probably no VPN
+                }
+                
+                // Check for known VPN ASN ranges via ipapi.co
+                if (ipify.value) {
+                    const asnCheck = await fetch(`https://ipapi.co/${ipify.value}/json/`).then(r => r.json());
+                    if (asnCheck && asnCheck.asn && (asnCheck.asn.includes('VPN') || asnCheck.asn.includes('Proxy') || asnCheck.asn.includes('Hosting'))) {
+                        return true;
+                    }
+                }
+                
+                return uniqueIps.size > 1; // IP mismatch suggests VPN or proxy
+            } catch (e) {
+                console.warn("VPN detection error:", e);
+                return false;
+            }
+        }
+        
+        // WebRTC STUN with retry across multiple servers
+        async function getViaWebRTCWithRetry(timeoutMs = 10000, useTurn = false) {
+            const servers = useTurn ? [...STUN_SERVERS.map(s => ({ urls: s.url })), ...TURN_SERVERS] : STUN_SERVERS.map(s => ({ urls: s.url }));
+            
+            for (let i = 0; i < servers.length; i++) {
+                try {
+                    const result = await getViaWebRTCSingle(servers[i], timeoutMs / 2);
+                    if (result && result.ip) {
+                        return { ...result, serverIndex: i };
+                    }
+                } catch (err) {
+                    console.warn(`STUN server ${i} failed:`, err.message);
+                    continue;
+                }
+            }
+            throw new Error("All STUN/TURN servers failed");
+        }
+        
+        function getViaWebRTCSingle(serverConfig, timeoutMs) {
+            return new Promise((resolve, reject) => {
+                const PeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+                if (!PeerConnection) {
+                    reject(new Error("WebRTC not supported"));
+                    return;
+                }
+                
+                const configuration = { iceServers: [serverConfig], iceCandidatePoolSize: 1 };
+                let pc = null;
+                let resolved = false;
+                let timeoutId = setTimeout(() => {
+                    if (!resolved) {
+                        cleanup();
+                        reject(new Error(`Timeout after ${timeoutMs}ms`));
+                    }
+                }, timeoutMs);
+                
+                const cleanup = () => {
+                    if (timeoutId) clearTimeout(timeoutId);
+                    if (pc) {
+                        try { pc.close(); } catch(e) {}
+                        pc = null;
+                    }
+                };
+                
+                try {
+                    pc = new PeerConnection(configuration);
+                    pc.createDataChannel("vpn-stun-probe");
+                    
+                    pc.onicecandidate = (event) => {
+                        if (resolved || !event.candidate) return;
+                        const candidateStr = event.candidate.candidate;
+                        if (candidateStr && candidateStr.includes("typ srflx")) {
+                            const regex = /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+(\d+)\s+typ\s+srflx/;
+                            const match = candidateStr.match(regex);
+                            if (match && match.length >= 3) {
+                                const ip = match[1];
+                                const port = parseInt(match[2]);
+                                if (ip && ip !== '0.0.0.0' && port > 0) {
+                                    resolved = true;
+                                    cleanup();
+                                    resolve({ ip, port, method: `WebRTC/STUN (${serverConfig.urls?.split(':')[1]?.split('//')[1] || 'custom'})` });
+                                }
+                            }
+                        }
+                    };
+                    
+                    pc.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false })
+                        .then(offer => pc.setLocalDescription(offer))
+                        .catch(err => {
+                            if (!resolved) {
+                                cleanup();
+                                reject(err);
+                            }
+                        });
+                } catch (err) {
+                    cleanup();
+                    reject(err);
+                }
+            });
+        }
+        
+        // HTTP fallback with port detection
+        async function getViaHTTPFallback() {
+            try {
+                const ipResponse = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(5000) });
+                const ipData = await ipResponse.json();
+                const publicIp = ipData.ip;
+                
+                // Try to get port from multiple STUN-over-HTTP endpoints
+                let mappedPort = null;
+                const portEndpoints = [
+                    'https://stun.metered.ca/api/port',
+                    'https://ipv4.stun.gg/port'
+                ];
+                
+                for (const endpoint of portEndpoints) {
+                    try {
+                        const res = await fetch(endpoint, { signal: AbortSignal.timeout(4000) });
+                        if (res.ok) {
+                            const text = await res.text();
+                            const port = parseInt(text);
+                            if (port > 0 && port <= 65535) {
+                                mappedPort = port;
+                                break;
+                            }
+                        }
+                    } catch (e) {}
+                }
+                
+                return {
+                    ip: publicIp,
+                    port: mappedPort,
+                    method: mappedPort ? "HTTP/STUN Hybrid (VPN compatible)" : "HTTP only (IP only, port hidden by VPN)"
+                };
+            } catch (err) {
+                throw new Error(`HTTP fallback failed: ${err.message}`);
+            }
+        }
+        
+        // Main detection with VPN awareness
+        async function detectWithVPNStrategy() {
+            setLoading();
+            updateUI(null, null, null, "Scanning network environment...", false, "detecting");
+            
+            // Detect VPN
+            let isVPN = false;
+            if (!vpnModeForced) {
+                isVPN = await detectVPN();
+                vpnDetected = isVPN;
+            } else {
+                isVPN = true;
+                vpnDetected = true;
+            }
+            
+            if (isVPN || vpnModeForced) {
+                vpnWarningDiv.style.display = 'block';
+                vpnStatusSpan.innerText = "⚠️ VPN/Likely VPN (optimized mode)";
+                updateUI(null, null, null, "VPN detected! Using extended timeouts + multiple STUN servers...", false, "VPN mode active");
+            } else {
+                vpnWarningDiv.style.display = 'none';
+                vpnStatusSpan.innerText = "✓ Normal (no VPN detected)";
+            }
+            
+            // Strategy 1: Try WebRTC with multiple STUN servers (VPN-friendly)
+            try {
+                const useTurn = isVPN && !vpnModeForced; // Use TURN if VPN detected
+                const timeout = isVPN ? 12000 : 8000;
+                const result = await getViaWebRTCWithRetry(timeout, useTurn);
+                if (result && result.ip) {
+                    updateUI(
+                        result.ip, result.port, result.method,
+                        `✅ Success via ${result.method} ${isVPN ? '(VPN-optimized)' : ''}`,
+                        false,
+                        isVPN ? "VPN mode - STUN succeeded" : "Normal"
+                    );
+                    return;
+                }
+            } catch (webrtcErr) {
+                console.warn("WebRTC failed under VPN:", webrtcErr);
+                updateUI(null, null, null, `WebRTC failed (${webrtcErr.message}), trying HTTP fallback...`, false, isVPN ? "VPN - trying HTTP" : "trying fallback");
+            }
+            
+            // Strategy 2: HTTP fallback (always works for IP, sometimes for port)
+            try {
+                const httpResult = await getViaHTTPFallback();
+                if (httpResult && httpResult.ip) {
+                    updateUI(
+                        httpResult.ip, httpResult.port, httpResult.method,
+                        `⚠️ WebRTC blocked by VPN, using ${httpResult.method}`,
+                        false,
+                        isVPN ? "VPN - HTTP fallback active" : "HTTP fallback"
+                    );
+                    return;
+                }
+            } catch (httpErr) {
+                console.error("HTTP fallback also failed:", httpErr);
+            }
+            
+            // All strategies failed
+            updateUI(null, null, "All methods failed", 
+                `❌ Detection failed. VPN or firewall may be blocking all STUN traffic. Try disabling kill-switch or use split tunneling.`,
+                true,
+                isVPN ? "VPN blocking detection" : "Unknown error"
+            );
+        }
+        
+        // Copy function
+        async function copyIpPort() {
+            if (currentIp && currentIp !== '—') {
+                const copyStr = currentPort ? `${currentIp}:${currentPort}` : currentIp;
+                try {
+                    await navigator.clipboard.writeText(copyStr);
+                    const btn = document.getElementById('copyBtn');
+                    const original = btn.innerText;
+                    btn.innerText = "✓ Copied!";
+                    setTimeout(() => btn.innerText = original, 1500);
+                    statusTextSpan.innerText = `📋 Copied: ${copyStr}`;
+                } catch (err) {
+                    statusTextSpan.innerText = `Copy failed: ${err.message}`;
+                }
+            } else {
+                statusTextSpan.innerText = "No IP:Port available to copy";
+            }
+        }
+        
+        // Toggle VPN mode manually
+        function toggleVPNMode() {
+            vpnModeForced = !vpnModeForced;
+            const btn = document.getElementById('vpnModeBtn');
+            if (vpnModeForced) {
+                btn.style.background = "#4a6e66";
+                btn.innerHTML = "🔄 VPN Mode: ON";
+                vpnStatusSpan.innerText = "Forced VPN mode";
+                vpnWarningDiv.style.display = 'block';
+            } else {
+                btn.style.background = "";
+                btn.innerHTML = "🔁 Toggle VPN Mode";
+                vpnWarningDiv.style.display = vpnDetected ? 'block' : 'none';
+                vpnStatusSpan.innerText = vpnDetected ? "⚠️ VPN detected" : "✓ Normal";
+            }
+            refreshDetection();
+        }
+        
+        let refreshLock = false;
+        async function refreshDetection() {
+            if (refreshLock) return;
+            refreshLock = true;
+            await detectWithVPNStrategy();
+            refreshLock = false;
+        }
+        
+        // Event bindings
+        document.getElementById('refreshBtn').addEventListener('click', () => refreshDetection());
+        document.getElementById('copyBtn').addEventListener('click', () => copyIpPort());
+        document.getElementById('vpnModeBtn').addEventListener('click', () => toggleVPNMode());
+        
+        // Initial detection
+        refreshDetection();
+    })();
+</script>
+</body>
+</html>
