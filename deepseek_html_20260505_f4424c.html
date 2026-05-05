@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>STUN Client: IP & Port Detector</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #0b2b2f 0%, #0a1f22 100%);
+            font-family: 'Segoe UI', 'Roboto', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(18, 28, 32, 0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(80, 210, 194, 0.2);
+            padding: 2rem 2rem 2.5rem;
+            max-width: 650px;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+
+        h1 {
+            font-size: 1.85rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            margin: 0 0 0.5rem 0;
+            color: #c6ffef;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        h1::before {
+            content: "🌐";
+            font-size: 2rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .sub {
+            color: #9ec7c0;
+            border-left: 3px solid #2dd4bf;
+            padding-left: 16px;
+            margin: 0 0 28px 0;
+            font-weight: 400;
+            font-size: 0.95rem;
+            opacity: 0.85;
+        }
+
+        .info-panel {
+            background: #0c181c;
+            border-radius: 1.75rem;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), 0 6px 12px -8px rgba(0,0,0,0.5);
+            border: 1px solid #2a4948;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            padding: 12px 0;
+            border-bottom: 1px dashed #2b4a48;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-weight: 500;
+            color: #92c9c0;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .value {
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            font-weight: 600;
+            font-size: 1.3rem;
+            color: #e2fff7;
+            word-break: break-all;
+            text-align: right;
+            background: #07121660;
+            padding: 4px 8px;
+            border-radius: 14px;
+        }
+
+        .loading-value {
+            color: #6e9690;
+            font-weight: 400;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #2a756b;
+            border-top: 2px solid #4fe3cf;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stun-status {
+            background: #071b1f;
+            border-radius: 40px;
+            padding: 10px 18px;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #7ba59e;
+            font-family: monospace;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin: 28px 0 16px;
+        }
+
+        button {
+            background: rgba(32, 58, 62, 0.8);
+            border: 1px solid #3d837b;
+            color: #d4fcf3;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(5px);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: #2c6e66;
+            border-color: #6ae2d0;
+            color: white;
+            transform: scale(0.97);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .footnote {
+            font-size: 0.7rem;
+            color: #3d7069;
+            text-align: center;
+            margin-top: 32px;
+            border-top: 1px solid #244e4a;
+            padding-top: 20px;
+        }
+
+        .error-badge {
+            background: #4a2a2ecc;
+            border-left: 3px solid #ff8a7a;
+            padding: 8px 12px;
+            border-radius: 18px;
+            font-size: 0.8rem;
+            color: #ffbcb0;
+        }
+
+        @media (max-width: 500px) {
+            .card {
+                padding: 1.5rem;
+            }
+            .value {
+                font-size: 1rem;
+            }
+            .info-row {
+                flex-direction: column;
+                gap: 6px;
+            }
+            .label {
+                margin-bottom: 4px;
+            }
+            .value {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>STUN Reflector</h1>
+    <div class="sub">Public IP + mapped port via WebRTC / STUN protocol</div>
+
+    <div class="info-panel">
+        <div class="info-row">
+            <span class="label">🌍 Public IP Address</span>
+            <span class="value" id="ipValue">—</span>
+        </div>
+        <div class="info-row">
+            <span class="label">🔌 Mapped Port (NAT)</span>
+            <span class="value" id="portValue">—</span>
+        </div>
+        <div class="info-row">
+            <span class="label">📡 STUN Server Used</span>
+            <span class="value" id="stunServerDisplay" style="font-size: 0.9rem;">stun.l.google.com:19302</span>
+        </div>
+        <div class="stun-status" id="statusMsg">
+            <span class="spinner"></span> <span id="statusText">probing via STUN...</span>
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button id="refreshBtn">⟳ Refresh via STUN</button>
+        <button id="copyBothBtn">📋 Copy IP:Port</button>
+    </div>
+    <div class="footnote">
+        ⚡ Uses standard Trickle ICE with Google STUN server. Returns the reflexive candidate (public IP & port) allocated by your NAT.<br>
+        ⚠️ Some restrictive firewalls or VPNs may block UDP/STUN — result may be delayed or fallback to host candidate.
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ------------------- STUN CONFIGURATION ------------------
+        // Default STUN server (Google Public STUN)
+        const DEFAULT_STUN_SERVER = 'stun:stun.l.google.com:19302';
+        const DISPLAY_SERVER_NAME = 'stun.l.google.com:19302';
+        
+        // DOM elements
+        const ipSpan = document.getElementById('ipValue');
+        const portSpan = document.getElementById('portValue');
+        const stunServerSpan = document.getElementById('stunServerDisplay');
+        const statusMsgSpan = document.getElementById('statusText');
+        const statusContainer = document.getElementById('statusMsg');
+        
+        let currentIceCandidate = null;      // store latest { ip, port }
+        let pendingTimeoutId = null;
+        let activePeerConnection = null;      // reference to close if needed
+        
+        // Helper to update UI with ip + port
+        function updateResult(ip, port, serverInfo = null) {
+            if (ip && ip !== '0.0.0.0') {
+                ipSpan.innerText = ip;
+            } else {
+                ipSpan.innerText = '—';
+            }
+            
+            if (port && port > 0 && port <= 65535) {
+                portSpan.innerText = port;
+            } else {
+                portSpan.innerText = '—';
+            }
+            
+            if (serverInfo) {
+                stunServerSpan.innerText = serverInfo;
+            }
+            
+            // store current candidate for copy action
+            if (ip && port && ip !== '0.0.0.0' && port > 0) {
+                currentIceCandidate = { ip: ip, port: port };
+            } else {
+                currentIceCandidate = null;
+            }
+        }
+        
+        // Set error / timeout message in status bar
+        function setStatus(message, isError = false) {
+            statusMsgSpan.innerText = message;
+            if (isError) {
+                statusContainer.style.background = "#2c1a1e";
+                statusContainer.style.color = "#ffbcb0";
+                // add a subtle class
+                statusContainer.style.borderLeft = "3px solid #ff8a7a";
+            } else {
+                statusContainer.style.background = "#071b1f";
+                statusContainer.style.color = "#7ba59e";
+                statusContainer.style.borderLeft = "none";
+            }
+        }
+        
+        // clear any previous pending timers/connections
+        function cleanupPending() {
+            if (pendingTimeoutId) {
+                clearTimeout(pendingTimeoutId);
+                pendingTimeoutId = null;
+            }
+            if (activePeerConnection) {
+                try {
+                    activePeerConnection.close();
+                } catch(e) { /* ignore */ }
+                activePeerConnection = null;
+            }
+        }
+        
+        // Reset UI with loading state
+        function startLoading() {
+            cleanupPending();
+            // reset values to loading dash
+            ipSpan.innerHTML = '<span class="loading-value"><span class="spinner"></span> detecting</span>';
+            portSpan.innerHTML = '<span class="loading-value"><span class="spinner"></span> detecting</span>';
+            currentIceCandidate = null;
+            setStatus("contacting STUN server... (UDP binding)", false);
+            // restore server display (always known)
+            stunServerSpan.innerText = DISPLAY_SERVER_NAME;
+        }
+        
+        // core STUN candidate gathering using WebRTC RTCPeerConnection
+        // returns a promise that resolves with { ip, port } or rejects on failure/timeout
+        function getStunMappedAddress(timeoutMs = 7000) {
+            return new Promise((resolve, reject) => {
+                // create a new RTCPeerConnection with only STUN
+                const configuration = {
+                    iceServers: [{ urls: DEFAULT_STUN_SERVER }],
+                    iceCandidatePoolSize: 1,
+                };
+                
+                let pc = null;
+                let resolved = false;
+                let timeoutId = null;
+                
+                const cleanupAndReject = (errorMsg) => {
+                    if (resolved) return;
+                    resolved = true;
+                    if (timeoutId) clearTimeout(timeoutId);
+                    if (pc) {
+                        try { pc.close(); } catch(e) {}
+                    }
+                    reject(new Error(errorMsg));
+                };
+                
+                try {
+                    pc = new RTCPeerConnection(configuration);
+                    activePeerConnection = pc; // store for possible external cleanup
+                    
+                    // Timeout guard
+                    timeoutId = setTimeout(() => {
+                        if (!resolved) {
+                            cleanupAndReject("STUN request timeout (NAT or firewall might block UDP)");
+                        }
+                    }, timeoutMs);
+                    
+                    // Create a data channel to force candidate gathering (no media needed)
+                    // This is a standard trick: create data channel and offer to start ICE.
+                    pc.createDataChannel("stun-probe");
+                    
+                    // Listen for ICE candidates
+                    pc.onicecandidate = (event) => {
+                        if (resolved) return;
+                        if (event.candidate) {
+                            const candidateStr = event.candidate.candidate;
+                            // Parse candidate for srflx (server reflexive) which contains public IP + port
+                            // Typical line: candidate:...  typ srflx raddr 0.0.0.0 rport 0 ...
+                            // We need to extract the IP and port that are associated with the mapped address.
+                            // For srflx type, the IP and port after the foundation etc are the mapped ones.
+                            // Example: candidate:842163049 1 udp 2123254271 203.0.113.7 54321 typ srflx raddr 192.168.1.2 rport 54321
+                            // The IP and port right before 'typ' are the public ones.
+                            if (candidateStr && candidateStr.includes(" typ srflx ")) {
+                                const parts = candidateStr.split(' ');
+                                // standard format: candidate foundation component protocol priority ip port typ ...
+                                // we need ip (4th from start?) let's parse systematically
+                                // Expect: 0: "candidate:xxx", 1: foundation, 2: component, 3: protocol, 4: priority, 5: IP, 6: port, 7: "typ", 8: "srflx" ...
+                                // However sometimes extra params like generation. Safer approach: iterate.
+                                let ipAddr = null;
+                                let portNum = null;
+                                for (let i = 0; i < parts.length - 2; i++) {
+                                    if (parts[i] === "typ" && parts[i+1] === "srflx") {
+                                        // ip and port are at positions -4 and -3 relative to 'typ'?
+                                        // Actually pattern: ... priority IP PORT typ srflx ...
+                                        // So IP is parts[i-2] and port parts[i-1]? Let's test.
+                                        // Example: ... 2123254271 203.0.113.7 54321 typ srflx ...
+                                        if (i >= 2 && !isNaN(parseInt(parts[i-1]))) {
+                                            ipAddr = parts[i-2];
+                                            portNum = parseInt(parts[i-1]);
+                                            break;
+                                        }
+                                    }
+                                }
+                                // fallback alternative if the above fails: scan with regex on candidate string
+                                if (!ipAddr) {
+                                    const regex = /(\d+\.\d+\.\d+\.\d+)\s+(\d+)\s+typ\s+srflx/;
+                                    const match = candidateStr.match(regex);
+                                    if (match && match.length >= 3) {
+                                        ipAddr = match[1];
+                                        portNum = parseInt(match[2]);
+                                    }
+                                }
+                                
+                                if (ipAddr && portNum && portNum > 0 && ipAddr !== '0.0.0.0') {
+                                    if (!resolved) {
+                                        resolved = true;
+                                        if (timeoutId) clearTimeout(timeoutId);
+                                        if (pc) {
+                                            // we close after gathering resolved
+                                            try { pc.close(); } catch(e) {}
+                                            if (activePeerConnection === pc) activePeerConnection = null;
+                                        }
+                                        resolve({ ip: ipAddr, port: portNum });
+                                    }
+                                }
+                            }
+                        } else {
+                            // ICE candidate gathering completed (null candidate), but we might have not found srflx.
+                            // In some networks, only host or relay candidates. For STUN only, if not found within a small delay,
+                            // we rely on the timeout; but we set extra checks.
+                            if (!resolved) {
+                                // if no srflx candidate after gathering finished, some NATs might not return mapping,
+                                // but we wait a bit longer – up to the timeout. We do nothing here and let timeout handle.
+                                // But sometimes gathering ends earlier without srflx -> reject with custom error later.
+                                if (!resolved) {
+                                    // set small delay to allow final candidate processing? Actually we just rely on timeout.
+                                }
+                            }
+                        }
+                    };
+                    
+                    // Create an offer to force ICE gathering to start
+                    pc.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false })
+                        .then(offer => pc.setLocalDescription(offer))
+                        .catch(err => {
+                            if (!resolved) {
+                                cleanupAndReject(`Failed to set local description: ${err.message}`);
+                            }
+                        });
+                    
+                } catch (err) {
+                    cleanupAndReject(`WebRTC error: ${err.message}`);
+                }
+            });
+        }
+        
+        // main function to fetch ip/port and update UI
+        async function fetchStunInfo() {
+            startLoading();
+            try {
+                const { ip, port } = await getStunMappedAddress(8000); // 8 sec timeout
+                // valid public ipv4 check (simple)
+                if (ip && port && ip !== '0.0.0.0' && port > 0 && port <= 65535) {
+                    updateResult(ip, port, DISPLAY_SERVER_NAME);
+                    setStatus(`✅ STUN response: reflexive candidate obtained`, false);
+                    // extra small success glow (optional)
+                    ipSpan.style.transition = "0.1s";
+                    portSpan.style.transition = "0.1s";
+                } else {
+                    throw new Error("Incomplete candidate (invalid port or private IP?)");
+                }
+            } catch (err) {
+                console.warn("STUN error:", err);
+                setStatus(`⚠️ STUN failed: ${err.message}`, true);
+                // fallback: display generic unreachable message
+                ipSpan.innerText = "?";
+                portSpan.innerText = "?";
+                currentIceCandidate = null;
+                // try to show a hint for potential VPN / firewall
+                const errorHint = err.message.includes("timeout") ? "No UDP response. Check firewall/VPN." : err.message;
+                setStatus(`⚠️ ${errorHint}`, true);
+                updateResult(null, null, DISPLAY_SERVER_NAME);
+            } finally {
+                cleanupPending(); // ensure any lingering connection cleaned
+                // adjust status container background reset if error
+                if (!statusMsgSpan.innerText.includes("✅")) {
+                    // keep style as is, but avoid permanent spinner in status
+                }
+                // remove spinner from values if those are placeholders
+                if (ipSpan.innerText.includes("spinner")) {
+                    ipSpan.innerText = "—";
+                }
+                if (portSpan.innerText.includes("spinner")) {
+                    portSpan.innerText = "—";
+                }
+            }
+        }
+        
+        // copy ip:port to clipboard
+        async function copyIpPort() {
+            if (currentIceCandidate && currentIceCandidate.ip && currentIceCandidate.port) {
+                const ipPortString = `${currentIceCandidate.ip}:${currentIceCandidate.port}`;
+                try {
+                    await navigator.clipboard.writeText(ipPortString);
+                    // Provide temporary visual feedback
+                    const copyBtn = document.getElementById('copyBothBtn');
+                    const originalText = copyBtn.innerText;
+                    copyBtn.innerText = "✓ Copied!";
+                    setTimeout(() => {
+                        copyBtn.innerText = originalText;
+                    }, 1800);
+                    setStatus(`📋 Copied: ${ipPortString}`, false);
+                } catch (err) {
+                    setStatus(`❌ Copy failed: ${err.message}`, true);
+                }
+            } else {
+                setStatus(`❌ No valid IP:port available. Click "Refresh via STUN" first.`, true);
+                // flash warning
+                const refreshBtn = document.getElementById('refreshBtn');
+                refreshBtn.style.transform = "scale(0.98)";
+                setTimeout(() => { refreshBtn.style.transform = ""; }, 200);
+            }
+        }
+        
+        // manual refresh: abort previous and start new
+        let isRefreshing = false;
+        async function refresh() {
+            if (isRefreshing) return;
+            isRefreshing = true;
+            await fetchStunInfo();
+            isRefreshing = false;
+        }
+        
+        // initial automatic fetch when page loads
+        let initialFetchDone = false;
+        function init() {
+            refresh().then(() => {
+                initialFetchDone = true;
+            }).catch(() => {
+                // already handled within fetchStunInfo
+            });
+            
+            // add event listeners
+            const refreshBtn = document.getElementById('refreshBtn');
+            const copyBtn = document.getElementById('copyBothBtn');
+            if (refreshBtn) refreshBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                refresh();
+            });
+            if (copyBtn) copyBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                copyIpPort();
+            });
+        }
+        
+        // start everything when DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+</script>
+</body>
+</html>
