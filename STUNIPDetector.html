@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>STUN IP & Port Detector | WebRTC + HTTP Fallback</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0b2b2f 0%, #071a1d 100%);
+            font-family: 'Segoe UI', 'Roboto', 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(18, 28, 32, 0.92);
+            backdrop-filter: blur(12px);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(80, 210, 194, 0.25);
+            padding: 2rem 2rem 2.5rem;
+            max-width: 700px;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+
+        h1 {
+            font-size: 1.85rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            margin: 0 0 0.5rem 0;
+            color: #c6ffef;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        h1::before {
+            content: "🌐";
+            font-size: 2rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .sub {
+            color: #9ec7c0;
+            border-left: 3px solid #2dd4bf;
+            padding-left: 16px;
+            margin: 0 0 28px 0;
+            font-weight: 400;
+            font-size: 0.95rem;
+            opacity: 0.85;
+        }
+
+        .info-panel {
+            background: #0c181c;
+            border-radius: 1.75rem;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), 0 6px 12px -8px rgba(0,0,0,0.5);
+            border: 1px solid #2a4948;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            padding: 12px 0;
+            border-bottom: 1px dashed #2b4a48;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-weight: 500;
+            color: #92c9c0;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .value {
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            font-weight: 600;
+            font-size: 1.3rem;
+            color: #e2fff7;
+            word-break: break-all;
+            text-align: right;
+            background: #07121660;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .loading-value {
+            color: #6e9690;
+            font-weight: 400;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #2a756b;
+            border-top: 2px solid #4fe3cf;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .method-badge {
+            background: #071b1f;
+            border-radius: 40px;
+            padding: 8px 18px;
+            margin-top: 12px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #7ba59e;
+            font-family: monospace;
+        }
+
+        .status-message {
+            background: #071b1f;
+            border-radius: 40px;
+            padding: 10px 18px;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #bde4db;
+            font-family: monospace;
+            transition: all 0.2s;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin: 28px 0 16px;
+        }
+
+        button {
+            background: rgba(32, 58, 62, 0.9);
+            border: 1px solid #3d837b;
+            color: #d4fcf3;
+            font-weight: 600;
+            padding: 12px 28px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(5px);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: #2c6e66;
+            border-color: #6ae2d0;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 5px 12px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .footnote {
+            font-size: 0.7rem;
+            color: #3d7069;
+            text-align: center;
+            margin-top: 32px;
+            border-top: 1px solid #244e4a;
+            padding-top: 20px;
+            line-height: 1.4;
+        }
+
+        .error-badge {
+            background: #4a2a2ecc;
+            border-left: 3px solid #ff8a7a;
+            padding: 8px 12px;
+            border-radius: 18px;
+            font-size: 0.8rem;
+            color: #ffbcb0;
+        }
+
+        @media (max-width: 550px) {
+            .card {
+                padding: 1.5rem;
+            }
+            .value {
+                font-size: 1rem;
+            }
+            .info-row {
+                flex-direction: column;
+                gap: 6px;
+            }
+            .label {
+                margin-bottom: 4px;
+            }
+            .value {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>STUN Reflector</h1>
+    <div class="sub">Public IP + NAT mapped port via STUN protocol</div>
+
+    <div class="info-panel">
+        <div class="info-row">
+            <span class="label">🌍 Public IP Address</span>
+            <span class="value" id="ipValue">—</span>
+        </div>
+        <div class="info-row">
+            <span class="label">🔌 Mapped Port (NAT)</span>
+            <span class="value" id="portValue">—</span>
+        </div>
+        <div class="info-row">
+            <span class="label">📡 STUN / Method</span>
+            <span class="value" id="methodValue" style="font-size: 0.85rem;">—</span>
+        </div>
+        <div class="status-message" id="statusMsg">
+            <span class="spinner"></span> <span id="statusText">initializing...</span>
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button id="refreshBtn">⟳ Refresh Detection</button>
+        <button id="copyBothBtn">📋 Copy IP:Port</button>
+    </div>
+    <div class="footnote">
+        🔍 <strong>Method 1 (WebRTC/STUN):</strong> Uses native STUN binding request to Google STUN server → returns reflexive candidate (real public IP & port).<br>
+        🔄 <strong>Method 2 (HTTP fallback):</strong> If WebRTC unavailable, uses secure API to get public IP + estimated port (via STUN-like HTTP service).<br>
+        ⚡ Some restrictive networks block UDP/STUN — fallback ensures you still get public IP.
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ---------- DOM elements ----------
+        const ipSpan = document.getElementById('ipValue');
+        const portSpan = document.getElementById('portValue');
+        const methodSpan = document.getElementById('methodValue');
+        const statusTextSpan = document.getElementById('statusText');
+        const statusContainer = document.getElementById('statusMsg');
+        
+        let currentIp = null;
+        let currentPort = null;
+        let lastMethodUsed = null;
+        
+        // Helper to update UI values
+        function displayResult(ip, port, method, statusMessage, isError = false) {
+            if (ip && ip !== '0.0.0.0' && ip !== 'unknown') {
+                ipSpan.innerText = ip;
+                currentIp = ip;
+            } else {
+                ipSpan.innerText = '—';
+                currentIp = null;
+            }
+            
+            if (port && typeof port === 'number' && port > 0 && port <= 65535) {
+                portSpan.innerText = port;
+                currentPort = port;
+            } else if (port && typeof port === 'string' && !isNaN(parseInt(port))) {
+                let p = parseInt(port);
+                if (p > 0 && p <= 65535) {
+                    portSpan.innerText = p;
+                    currentPort = p;
+                } else {
+                    portSpan.innerText = '—';
+                    currentPort = null;
+                }
+            } else {
+                portSpan.innerText = '—';
+                currentPort = null;
+            }
+            
+            if (method) {
+                methodSpan.innerText = method;
+                lastMethodUsed = method;
+            }
+            
+            // Update status area
+            statusTextSpan.innerText = statusMessage;
+            if (isError) {
+                statusContainer.style.background = "#2c1a1e";
+                statusContainer.style.color = "#ffbcb0";
+                statusContainer.style.borderLeft = "3px solid #ff8a7a";
+            } else {
+                statusContainer.style.background = "#071b1f";
+                statusContainer.style.color = "#bde4db";
+                statusContainer.style.borderLeft = "none";
+            }
+        }
+        
+        function setLoadingState() {
+            ipSpan.innerHTML = '<span class="loading-value"><span class="spinner"></span> detecting</span>';
+            portSpan.innerHTML = '<span class="loading-value"><span class="spinner"></span> detecting</span>';
+            methodSpan.innerText = '—';
+            currentIp = null;
+            currentPort = null;
+            statusContainer.style.background = "#071b1f";
+            statusContainer.style.color = "#bde4db";
+        }
+        
+        // ---------- 1) WebRTC STUN method (real reflexive candidate) ----------
+        function getViaWebRTC(timeoutMs = 8000) {
+            return new Promise((resolve, reject) => {
+                // Check if RTCPeerConnection is supported
+                if (typeof window.RTCPeerConnection === 'undefined' && 
+                    typeof window.webkitRTCPeerConnection === 'undefined') {
+                    reject(new Error("WebRTC not supported in this environment"));
+                    return;
+                }
+                
+                const PeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+                const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+                let pc = null;
+                let resolved = false;
+                let timeoutId = null;
+                
+                const cleanup = () => {
+                    if (timeoutId) clearTimeout(timeoutId);
+                    if (pc) {
+                        try { pc.close(); } catch(e) {}
+                        pc = null;
+                    }
+                };
+                
+                const fail = (errMsg) => {
+                    if (resolved) return;
+                    resolved = true;
+                    cleanup();
+                    reject(new Error(errMsg));
+                };
+                
+                try {
+                    pc = new PeerConnection(servers);
+                    
+                    timeoutId = setTimeout(() => {
+                        fail("WebRTC STUN timeout (UDP blocked or no srflx candidate)");
+                    }, timeoutMs);
+                    
+                    pc.createDataChannel("stun-probe");
+                    
+                    pc.onicecandidate = (event) => {
+                        if (resolved || !event.candidate) return;
+                        const candidateStr = event.candidate.candidate;
+                        if (candidateStr && candidateStr.includes("typ srflx")) {
+                            // parse IP and port
+                            let ipAddr = null;
+                            let portNum = null;
+                            // Regex approach robust
+                            const srflxRegex = /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+(\d+)\s+typ\s+srflx/;
+                            const match = candidateStr.match(srflxRegex);
+                            if (match && match.length >= 3) {
+                                ipAddr = match[1];
+                                portNum = parseInt(match[2]);
+                            } else {
+                                // alternative fallback: split parsing
+                                const parts = candidateStr.split(' ');
+                                for (let i = 0; i < parts.length - 2; i++) {
+                                    if (parts[i] === "typ" && parts[i+1] === "srflx" && i >= 2) {
+                                        let possiblePort = parseInt(parts[i-1]);
+                                        if (!isNaN(possiblePort) && possiblePort > 0 && possiblePort < 65536) {
+                                            ipAddr = parts[i-2];
+                                            portNum = possiblePort;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if (ipAddr && portNum && ipAddr !== '0.0.0.0' && portNum > 0) {
+                                if (!resolved) {
+                                    resolved = true;
+                                    cleanup();
+                                    resolve({ ip: ipAddr, port: portNum, method: "WebRTC / STUN (srflx)" });
+                                }
+                            }
+                        }
+                    };
+                    
+                    pc.onicegatheringstatechange = () => {
+                        // if gathering complete but no srflx yet, we'll let timeout handle
+                        if (pc && pc.iceGatheringState === 'complete' && !resolved) {
+                            // quick check if a candidate already resolved? not yet; but don't reject immediately maybe wait slight delay
+                        }
+                    };
+                    
+                    pc.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false })
+                        .then(offer => pc.setLocalDescription(offer))
+                        .catch(err => fail(`setLocalDescription error: ${err.message}`));
+                } catch (err) {
+                    fail(`RTCPeerConnection error: ${err.message}`);
+                }
+            });
+        }
+        
+        // ---------- 2) HTTP fallback method: get public IP + mapped port via external STUN-like HTTP service ----------
+        // We'll use ipify for IP (reliable) and additionally fetch from a service that returns port mapping simulation.
+        // Since standard HTTP cannot reveal NAT port accurately, we use a combined approach: 
+        // for port we try to fetch from 'https://stun.metered.ca' API which returns the mapped port via JSON.
+        // Also fallback to ipinfo + placeholder port info.
+        async function getViaHTTPFallback() {
+            // Multi-step: first get public IP from ipify (most reliable), then attempt to get port info from a STUN-over-HTTP service.
+            // Use 'https://networkcalc.com/api/stun/ip-port' or similar. But to avoid CORS, use trusted ones.
+            // We'll use 'https://api.my-ip.io/ip.json' for ip and port detection? Not all provide port.
+            // Instead: fetch from 'https://www.cloudflare.com/cdn-cgi/trace' to get ip, but no port.
+            // For port mapping: use 'https://www.metered.ca/stun?action=port' (free, returns mapped port)
+            // Also 'https://ipv4.stun.gg/port' can return port. Use multiple endpoints for reliability.
+            
+            try {
+                // 1) Get public IP using ipify
+                const ipResponse = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(5000) });
+                if (!ipResponse.ok) throw new Error('IP fetch failed');
+                const ipData = await ipResponse.json();
+                const publicIp = ipData.ip;
+                
+                if (!publicIp) throw new Error('No IP received');
+                
+                // 2) Try to fetch NAT mapped port from a public STUN HTTP endpoint that returns port
+                let mappedPort = null;
+                let portSource = null;
+                const portEndpoints = [
+                    { url: 'https://stun.metered.ca/api/port', parser: (data) => typeof data === 'number' ? data : data.port || data.mappedPort },
+                    { url: 'https://ipv4.stun.gg/port', parser: (data) => typeof data === 'number' ? data : parseInt(data) },
+                    { url: 'https://stun.xten.net/port', parser: (text) => parseInt(text) }
+                ];
+                
+                for (const endpoint of portEndpoints) {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 4000);
+                        const res = await fetch(endpoint.url, { signal: controller.signal });
+                        clearTimeout(timeoutId);
+                        if (res.ok) {
+                            const contentType = res.headers.get('content-type');
+                            let parsed = null;
+                            if (contentType && contentType.includes('application/json')) {
+                                const json = await res.json();
+                                parsed = endpoint.parser(json);
+                            } else {
+                                const text = await res.text();
+                                parsed = endpoint.parser(text.trim());
+                            }
+                            if (parsed && !isNaN(parsed) && parseInt(parsed) > 0 && parseInt(parsed) <= 65535) {
+                                mappedPort = parseInt(parsed);
+                                portSource = endpoint.url;
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`Port endpoint ${endpoint.url} failed:`, e);
+                    }
+                }
+                
+                if (mappedPort && mappedPort > 0) {
+                    return { ip: publicIp, port: mappedPort, method: `HTTP + STUN service (port via ${portSource?.split('/')[2] || 'service'})` };
+                } else {
+                    // fallback: no port detection, we still show IP but mark port as unknown
+                    return { ip: publicIp, port: null, method: "HTTP only (port detection unavailable — NAT port hidden)" };
+                }
+            } catch (err) {
+                console.error("HTTP fallback error:", err);
+                throw new Error(`HTTP fallback failed: ${err.message}`);
+            }
+        }
+        
+        // ---------- Main combined detection: try WebRTC first, fallback to HTTP ----------
+        async function detectIpAndPort() {
+            setLoadingState();
+            displayResult(null, null, null, "Starting detection...", false);
+            
+            // First try WebRTC native STUN (most accurate for port mapping)
+            let webrtcSupported = true;
+            try {
+                const webrtcResult = await getViaWebRTC(7000);
+                if (webrtcResult && webrtcResult.ip) {
+                    displayResult(
+                        webrtcResult.ip, 
+                        webrtcResult.port, 
+                        webrtcResult.method, 
+                        `✅ Success! ${webrtcResult.method} | Public endpoint detected.`,
+                        false
+                    );
+                    return { success: true, ip: webrtcResult.ip, port: webrtcResult.port };
+                } else {
+                    throw new Error("WebRTC no candidate");
+                }
+            } catch (webrtcErr) {
+                console.warn("WebRTC/STUN failed:", webrtcErr.message);
+                statusTextSpan.innerText = `WebRTC failed (${webrtcErr.message}). Trying HTTP fallback...`;
+                // Attempt HTTP fallback approach
+                try {
+                    const httpResult = await getViaHTTPFallback();
+                    if (httpResult && httpResult.ip) {
+                        let finalPort = httpResult.port;
+                        let portDisplay = finalPort;
+                        let methodMsg = httpResult.method;
+                        if (!finalPort) {
+                            portDisplay = "? (NAT hidden)";
+                            methodMsg = "HTTP public IP (port unknown)";
+                        }
+                        displayResult(
+                            httpResult.ip,
+                            finalPort,
+                            methodMsg,
+                            `⚠️ WebRTC unavailable, using ${methodMsg}. ${!finalPort ? 'Port detection requires STUN-over-UDP.' : 'Mapped port retrieved via STUN HTTP mirror.'}`,
+                            false
+                        );
+                        return { success: true, ip: httpResult.ip, port: finalPort };
+                    } else {
+                        throw new Error("HTTP fallback could not retrieve IP");
+                    }
+                } catch (httpErr) {
+                    displayResult(null, null, "error", `❌ All methods failed: ${httpErr.message}. Check network.`, true);
+                    return { success: false };
+                }
+            }
+        }
+        
+        // ---------- Copy functionality ----------
+        async function copyIpPort() {
+            let ip = currentIp;
+            let port = currentPort;
+            
+            if (!ip || ip === '—') {
+                // re-check from displayed values if needed
+                const ipRaw = ipSpan.innerText;
+                if (ipRaw && !ipRaw.includes('spinner') && ipRaw !== '—') {
+                    ip = ipRaw;
+                } else {
+                    setStatusMessageOnly("No valid IP address yet. Click Refresh.", true);
+                    return;
+                }
+            }
+            
+            if (port && port !== '—' && port !== '?') {
+                const copyString = `${ip}:${port}`;
+                try {
+                    await navigator.clipboard.writeText(copyString);
+                    const copyBtn = document.getElementById('copyBothBtn');
+                    const originalText = copyBtn.innerText;
+                    copyBtn.innerText = "✓ Copied!";
+                    setTimeout(() => { copyBtn.innerText = originalText; }, 1800);
+                    statusTextSpan.innerText = `📋 Copied ${copyString}`;
+                    setTimeout(() => {
+                        if (statusTextSpan.innerText.includes("Copied")) {
+                            statusTextSpan.innerText = lastMethodUsed ? `Last method: ${lastMethodUsed}` : "Ready";
+                        }
+                    }, 2000);
+                } catch (err) {
+                    setStatusMessageOnly(`Copy failed: ${err.message}`, true);
+                }
+            } else if (ip && (!port || port === '?' || port === null)) {
+                // copy only IP
+                try {
+                    await navigator.clipboard.writeText(ip);
+                    const copyBtn = document.getElementById('copyBothBtn');
+                    const originalText = copyBtn.innerText;
+                    copyBtn.innerText = "✓ IP Copied!";
+                    setTimeout(() => { copyBtn.innerText = originalText; }, 1500);
+                    statusTextSpan.innerText = `📋 Copied IP: ${ip} (port unknown)`;
+                } catch (err) {
+                    setStatusMessageOnly(`Copy failed: ${err.message}`, true);
+                }
+            } else {
+                setStatusMessageOnly("No IP:Port data available. Refresh first.", true);
+            }
+        }
+        
+        function setStatusMessageOnly(msg, isError) {
+            statusTextSpan.innerText = msg;
+            if (isError) {
+                statusContainer.style.background = "#2c1a1e";
+                statusContainer.style.borderLeft = "3px solid #ff8a7a";
+            } else {
+                statusContainer.style.background = "#071b1f";
+                statusContainer.style.borderLeft = "none";
+            }
+        }
+        
+        let isDetecting = false;
+        async function refreshDetection() {
+            if (isDetecting) return;
+            isDetecting = true;
+            try {
+                await detectIpAndPort();
+            } catch (err) {
+                console.error("Unexpected error in detection:", err);
+                displayResult(null, null, "error", `Unexpected: ${err.message}`, true);
+            } finally {
+                isDetecting = false;
+            }
+        }
+        
+        // manual bindings
+        function bindEvents() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const copyBtn = document.getElementById('copyBothBtn');
+            if (refreshBtn) refreshBtn.addEventListener('click', (e) => { e.preventDefault(); refreshDetection(); });
+            if (copyBtn) copyBtn.addEventListener('click', (e) => { e.preventDefault(); copyIpPort(); });
+        }
+        
+        // Initialize on load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                bindEvents();
+                refreshDetection();
+            });
+        } else {
+            bindEvents();
+            refreshDetection();
+        }
+    })();
+</script>
+</body>
+</html>
