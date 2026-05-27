@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Find My IP Address</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 100px;
+    }
+    #ipDisplay {
+      font-size: 24px;
+      margin-top: 20px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Find Your Public IP Address</h1>
+  <div id="ipDisplay">Loading IP...</div>
+
+  <script>
+    // Fetch the user's public IP address using a third-party API
+    fetch('https://api.ipify.org?format=json')
+      .then(response => response.json())
+      .then(data => {
+        const ipDisplay = document.getElementById('ipDisplay');
+        ipDisplay.textContent = `Your Public IP: ${data.ip}`;
+      })
+      .catch(error => {
+        const ipDisplay = document.getElementById('ipDisplay');
+        ipDisplay.textContent = 'Failed to retrieve IP. Check your internet connection.';
+        console.error('Error fetching IP:', error);
+      });
+  </script>
+</body>
+</html>
